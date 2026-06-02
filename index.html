@@ -99,10 +99,10 @@ body {
 .content.in-right  { animation: inRight  0.22s ease-out; }
 .content.in-left   { animation: inLeft   0.22s ease-out; }
 
-@keyframes outLeft  { to   { transform: translateX(-28%) scale(0.97); opacity: 0; } }
-@keyframes outRight { to   { transform: translateX( 28%) scale(0.97); opacity: 0; } }
-@keyframes inRight  { from { transform: translateX( 28%) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes inLeft   { from { transform: translateX(-28%) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes outLeft  { to   { transform: translateX(-30%); opacity: 0; } }
+@keyframes outRight { to   { transform: translateX( 30%); opacity: 0; } }
+@keyframes inRight  { from { transform: translateX( 30%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes inLeft   { from { transform: translateX(-30%); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ── Lot card ────────────────────────────────────────────── */
 
@@ -254,6 +254,29 @@ body {
   font-family: var(--font);
   width: 100%;
 }
+
+/* ── Picker mode toggle ──────────────────────────────────── */
+
+.picker-mode-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: -4px;
+}
+.picker-mode-btn {
+  background: var(--n200);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 4px 14px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--n500);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s, background 0.15s;
+  letter-spacing: 0.3px;
+}
+.picker-mode-btn.head { color: var(--sell); background: rgba(249,115,22,0.12); }
 
 /* ── Chips ───────────────────────────────────────────────── */
 
@@ -573,6 +596,10 @@ body {
           </div>
         </div>
 
+        <div class="picker-mode-row">
+          <button class="picker-mode-btn" id="pickerModeBtn" onclick="togglePickerMode()">$/kg</button>
+        </div>
+
         <div class="picker-wrap">
           <button class="picker-btn" id="btnMinus">−</button>
           <div class="picker" id="picker">
@@ -639,7 +666,7 @@ body {
     <button class="np-btn" onclick="npKey('1')">1</button>
     <button class="np-btn" onclick="npKey('2')">2</button>
     <button class="np-btn" onclick="npKey('3')">3</button>
-    <button class="np-btn sym" id="npDel" onclick="npKey('del')">⌫</button>
+    <button class="np-btn sym" id="npDel" onclick="npKey('del')"><svg width="22" height="17" viewBox="0 0 22 17" fill="none" aria-hidden="true"><path d="M8.5 1.5H20.5V15.5H8.5L1.5 8.5L8.5 1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13 6L18 11M18 6L13 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <button class="np-btn sym" id="npDot" onclick="npKey('.')">.</button>
     <button class="np-btn" onclick="npKey('0')">0</button>
     <button class="np-btn set" onclick="npSet()">Set</button>
@@ -679,12 +706,35 @@ const STEP = 0.02, START = 0.50, TOTAL = 350, ITEM_H = 37, PCTR = 74;
 function getPrice(i) { return START + i * STEP; }
 function fmtP(n)     { return n.toFixed(2); }
 
+let pickerMode = 'kg'; // 'kg' | 'head'
+
+function getPickerLabel(i) {
+  if (pickerMode === 'head') {
+    const w = S().weight.from;
+    if (w) return '$' + Math.round(getPrice(i) * w);
+  }
+  return fmtP(getPrice(i));
+}
+
+function refreshPickerLabels() {
+  const items = document.getElementById('pickerTrack').children;
+  for (let i = 0; i < items.length; i++) items[i].textContent = getPickerLabel(i);
+}
+
+function togglePickerMode() {
+  pickerMode = pickerMode === 'kg' ? 'head' : 'kg';
+  const btn = document.getElementById('pickerModeBtn');
+  btn.textContent = pickerMode === 'kg' ? '$/kg' : '$/head';
+  btn.classList.toggle('head', pickerMode === 'head');
+  refreshPickerLabels();
+}
+
 function buildPicker() {
   const track = document.getElementById('pickerTrack');
   for (let i = 0; i < TOTAL; i++) {
     const el = document.createElement('div');
     el.className = 'picker-item';
-    el.textContent = fmtP(getPrice(i));
+    el.textContent = getPickerLabel(i);
     track.appendChild(el);
   }
 }
@@ -718,10 +768,9 @@ function styleItems() {
   }
 }
 
-// +/- buttons: spring-overshoot easing feels like a physical click-and-settle
 function movePicker(delta) {
   S().priceIdx = Math.max(0, Math.min(TOTAL - 1, S().priceIdx + delta));
-  applyPickerPos(true, 'cubic-bezier(0.175, 0.885, 0.32, 1.275)', 260);
+  applyPickerPos(true, 'cubic-bezier(0.22, 1, 0.36, 1)', 150);
   styleItems();
   updateCells();
 }
@@ -729,25 +778,19 @@ function movePicker(delta) {
 document.getElementById('btnMinus').addEventListener('click', () => movePicker(-1));
 document.getElementById('btnPlus').addEventListener('click',  () => movePicker( 1));
 
-// Drag with momentum
+// Drag — simple track-and-snap
 let dragging = false, dragY0 = 0, dragIdx0 = 0;
-let velY = 0, prevY = 0, prevT = 0, rafId = null;
 const pickerEl = document.getElementById('picker');
 
 pickerEl.addEventListener('pointerdown', e => {
-  if (rafId) cancelAnimationFrame(rafId);
   dragging = true;
   dragY0 = e.clientY; dragIdx0 = S().priceIdx;
-  velY = 0; prevY = e.clientY; prevT = performance.now();
   pickerEl.setPointerCapture(e.pointerId);
   document.getElementById('pickerTrack').style.transition = 'none';
 });
 
 pickerEl.addEventListener('pointermove', e => {
   if (!dragging) return;
-  const now = performance.now(), dt = now - prevT;
-  if (dt > 0) velY = (prevY - e.clientY) / dt;
-  prevY = e.clientY; prevT = now;
   const dy = dragY0 - e.clientY;
   S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(dragIdx0 + dy / ITEM_H)));
   applyPickerPos(false);
@@ -757,20 +800,7 @@ pickerEl.addEventListener('pointermove', e => {
 
 pickerEl.addEventListener('pointerup', () => {
   dragging = false;
-  let v = velY;
-  function coast() {
-    v *= 0.82;
-    if (Math.abs(v) < 0.03) {
-      applyPickerPos(true, 'cubic-bezier(0.22, 1, 0.36, 1)', 160);
-      return;
-    }
-    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx + v * 1.4)));
-    applyPickerPos(false);
-    styleItems();
-    updateCells();
-    rafId = requestAnimationFrame(coast);
-  }
-  rafId = requestAnimationFrame(coast);
+  applyPickerPos(true, 'cubic-bezier(0.22, 1, 0.36, 1)', 150);
 });
 
 // ─── Cell rendering ───────────────────────────────────────────────────────────
@@ -826,7 +856,7 @@ let npMode = null, npActive = 'from', npFrom = '', npTo = '';
 const NP_CFG = {
   tally:     { title: 'Enter tally',     unit: '',      maxLen: 4, decimal: false,
                labelFrom: 'From', labelTo: 'To (optional)' },
-  weight:    { title: 'Enter weight',    unit: 'kg',    maxLen: 4, decimal: false,
+  weight:    { title: 'Enter weight',    unit: 'kg',    maxLen: 6, decimal: true,
                labelFrom: 'From', labelTo: 'To (optional)' },
   pricekg:   { title: 'Set price /kg',   unit: '/kg',   maxLen: 5, decimal: true,
                labelFrom: 'Low (optional)', labelTo: 'Main' },
@@ -913,6 +943,7 @@ function npSet() {
   } else if (npMode === 'weight') {
     s.weight.from = pF(npFrom); s.weight.to = pF(npTo);
     s.headManual = { from: null, to: null };
+    refreshPickerLabels();
 
   } else if (npMode === 'pricekg') {
     const hi = priceStrToIdx(npTo), lo = priceStrToIdx(npFrom);
@@ -1026,6 +1057,9 @@ function renderChips() {
   </button>`;
 
   document.getElementById('chipsRow').innerHTML = html;
+  // Scroll notes into view after chips may have grown
+  setTimeout(() => document.getElementById('notesField')
+    .scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
 }
 
 function removeUB(name) { S().underbidders = S().underbidders.filter(n=>n!==name); renderChips(); }
@@ -1057,6 +1091,7 @@ function loadLot() {
   document.getElementById('btnNext').disabled = lotIdx === LOTS.length - 1;
   applyPickerPos(false);
   styleItems();
+  refreshPickerLabels();
   updateCells();
   renderChips();
 }
