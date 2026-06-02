@@ -771,7 +771,7 @@ function styleItems() {
 
 function movePicker(delta) {
   S().priceIdx = Math.max(0, Math.min(TOTAL - 1, S().priceIdx + delta));
-  applyPickerPos(true, 'cubic-bezier(0.22, 1, 0.36, 1)', 150);
+  applyPickerPos(true, 'cubic-bezier(0.175, 0.885, 0.32, 1.275)', 260);
   styleItems();
   updateCells();
 }
@@ -779,19 +779,25 @@ function movePicker(delta) {
 document.getElementById('btnMinus').addEventListener('click', () => movePicker(-1));
 document.getElementById('btnPlus').addEventListener('click',  () => movePicker( 1));
 
-// Drag — simple track-and-snap
+// Drag with momentum
 let dragging = false, dragY0 = 0, dragIdx0 = 0;
+let velY = 0, prevY = 0, prevT = 0, rafId = null;
 const pickerEl = document.getElementById('picker');
 
 pickerEl.addEventListener('pointerdown', e => {
+  if (rafId) cancelAnimationFrame(rafId);
   dragging = true;
   dragY0 = e.clientY; dragIdx0 = S().priceIdx;
+  velY = 0; prevY = e.clientY; prevT = performance.now();
   pickerEl.setPointerCapture(e.pointerId);
   document.getElementById('pickerTrack').style.transition = 'none';
 });
 
 pickerEl.addEventListener('pointermove', e => {
   if (!dragging) return;
+  const now = performance.now(), dt = now - prevT;
+  if (dt > 0) velY = (prevY - e.clientY) / dt;
+  prevY = e.clientY; prevT = now;
   const dy = dragY0 - e.clientY;
   S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(dragIdx0 + dy / ITEM_H)));
   applyPickerPos(false);
@@ -801,7 +807,20 @@ pickerEl.addEventListener('pointermove', e => {
 
 pickerEl.addEventListener('pointerup', () => {
   dragging = false;
-  applyPickerPos(true, 'cubic-bezier(0.22, 1, 0.36, 1)', 150);
+  let v = velY;
+  function coast() {
+    v *= 0.82;
+    if (Math.abs(v) < 0.03) {
+      applyPickerPos(true, 'cubic-bezier(0.22, 1, 0.36, 1)', 160);
+      return;
+    }
+    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx + v * 1.4)));
+    applyPickerPos(false);
+    styleItems();
+    updateCells();
+    rafId = requestAnimationFrame(coast);
+  }
+  rafId = requestAnimationFrame(coast);
 });
 
 // ─── Cell rendering ───────────────────────────────────────────────────────────
