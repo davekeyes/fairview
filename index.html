@@ -204,6 +204,7 @@ body {
   transition: color 0.1s, background 0.1s;
   user-select: none;
   flex-shrink: 0;
+  touch-action: manipulation; /* prevents double-tap zoom */
 }
 .picker-btn:active { color: var(--n800); background: var(--n200); }
 
@@ -254,13 +255,6 @@ body {
   font-family: var(--font);
   width: 100%;
 }
-/* Centre item pulses on each step — no cascade transitions that collide on rapid taps */
-@keyframes pickerPulse {
-  0%   { transform: scale(1);    opacity: 1; }
-  35%  { transform: scale(1.08); opacity: 1; }
-  100% { transform: scale(1);    opacity: 1; }
-}
-.picker-item.pulse { animation: pickerPulse 0.18s ease-out; }
 
 /* ── Picker mode toggle ──────────────────────────────────── */
 
@@ -755,7 +749,7 @@ function applyPickerPos(animate, easing, dur) {
   track.style.transform = `translateY(${offset}px)`;
 }
 
-function styleItems(pulse) {
+function styleItems() {
   const items = document.getElementById('pickerTrack').children;
   const idx = S().priceIdx;
   for (let i = 0; i < items.length; i++) {
@@ -772,21 +766,15 @@ function styleItems(pulse) {
     items[i].style.fontSize = fs;
     items[i].style.color    = col;
     items[i].style.opacity  = op;
-    // Pulse the centre item — remove then re-add to restart animation each tap
-    if (d === 0 && pulse) {
-      items[i].classList.remove('pulse');
-      void items[i].offsetWidth; // force reflow to restart animation
-      items[i].classList.add('pulse');
-    } else {
-      items[i].classList.remove('pulse');
-    }
   }
 }
 
 function movePicker(delta) {
   S().priceIdx = Math.max(0, Math.min(TOTAL - 1, S().priceIdx + delta));
-  applyPickerPos(false);
-  styleItems(true); // pulse centre item on button tap
+  // Clean ease-out, no overshoot — track slides in the correct direction;
+  // rapid taps always continue forward because current position never exceeds target
+  applyPickerPos(true, 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', 160);
+  styleItems();
   updateCells();
 }
 
