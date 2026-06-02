@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>Fairview — Auction</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,66 +23,69 @@
   --n900:  #ffffff;
   --sell:  #f97316;
   --font:  'IBM Plex Sans', sans-serif;
-  --r-sm:  8px;
+  --r:     8px;
   --r-md:  16px;
-  --r-pill: 999px;
+  --r-pill:999px;
 }
 
-html, body {
-  height: 100%;
-  background: #0d0f12;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+html {
+  background: var(--n50);
+  overscroll-behavior: none;
+}
+
+body {
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
-}
-
-/* ── Phone shell ─────────────────────────────────────────── */
-
-.phone {
-  width: 393px;
-  height: 852px;
   background: var(--n50);
-  border-radius: 50px;
+  color: var(--n800);
+  height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  position: relative;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.7);
 }
 
-/* ── Status bar ──────────────────────────────────────────── */
+/* ── Page ────────────────────────────────────────────────── */
 
-.status-bar {
-  height: 59px;
-  background: var(--n50);
+.page {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 28px;
-  flex-shrink: 0;
+  flex-direction: column;
+  height: 100%;
+  padding-top: env(safe-area-inset-top, 0px);
+  overflow: hidden;
+  position: relative;
 }
-.status-time {
-  font-size: 15px;
+
+/* ── Header ──────────────────────────────────────────────── */
+
+.header {
+  flex-shrink: 0;
+  padding: 10px 16px 6px;
+  text-align: center;
+}
+.lot-number {
+  font-size: 20px;
   font-weight: 600;
-  color: var(--n900);
+  color: var(--n800);
   letter-spacing: 0.1px;
 }
-.status-icons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--n900);
+
+/* ── Scroll area ─────────────────────────────────────────── */
+
+.scroll-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
 }
 
-/* ── Scrollable content ──────────────────────────────────── */
-
 .content {
-  flex: 1;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 16px 20px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* Bottom padding accounts for nav bar + safe area + browser chrome */
+  padding: 4px 16px calc(env(safe-area-inset-bottom, 0px) + 88px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -90,17 +93,16 @@ html, body {
 }
 .content::-webkit-scrollbar { display: none; }
 
-/* ── Lot heading ─────────────────────────────────────────── */
+/* Lot transition */
+.content.out-left  { animation: outLeft  0.22s ease-in  forwards; }
+.content.out-right { animation: outRight 0.22s ease-in  forwards; }
+.content.in-right  { animation: inRight  0.22s ease-out; }
+.content.in-left   { animation: inLeft   0.22s ease-out; }
 
-.lot-heading {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--n800);
-  letter-spacing: 0.1px;
-  text-align: center;
-  padding: 8px 0;
-  flex-shrink: 0;
-}
+@keyframes outLeft  { to   { transform: translateX(-28%) scale(0.97); opacity: 0; } }
+@keyframes outRight { to   { transform: translateX( 28%) scale(0.97); opacity: 0; } }
+@keyframes inRight  { from { transform: translateX( 28%) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes inLeft   { from { transform: translateX(-28%) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ── Lot card ────────────────────────────────────────────── */
 
@@ -114,23 +116,9 @@ html, body {
   gap: 12px;
 }
 
-.lot-info { padding: 8px; }
-.lot-vendor {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--n800);
-  letter-spacing: 0.1px;
-  margin-bottom: 4px;
-}
-.lot-meta {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--n700);
-  letter-spacing: 0.1px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 4px;
-}
+.lot-info { padding: 8px 8px 4px; }
+.lot-vendor { font-size: 20px; font-weight: 600; color: var(--n800); letter-spacing: 0.1px; margin-bottom: 4px; }
+.lot-meta   { font-size: 16px; font-weight: 500; color: var(--n700); letter-spacing: 0.1px; }
 
 /* ── Data cells ──────────────────────────────────────────── */
 
@@ -138,80 +126,69 @@ html, body {
 
 .cell {
   background: var(--n200);
-  border-radius: var(--r-sm);
+  border-radius: var(--r);
   padding: 8px 12px 12px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
 }
 .cell:active { background: #3a4250; }
-.cell.no-tap { cursor: default; }
-.cell.no-tap:active { background: var(--n200); }
 
 .cell-label {
   font-size: 11px;
   font-weight: 500;
-  color: var(--n700);
+  color: var(--n600);
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  line-height: 1.2;
+  line-height: 1.4;
 }
-.cell-value {
-  font-size: 24px;
-  font-weight: 500;
-  color: var(--n800);
+
+.cell-body {
   display: flex;
   align-items: baseline;
   gap: 3px;
-  line-height: 1;
-  margin-top: 2px;
+  flex-wrap: nowrap;
+  min-height: 28px;
 }
-.cell-value.right { justify-content: flex-end; }
-.cell-unit {
-  font-size: 14px;
-  font-style: italic;
-  color: var(--n500);
-  font-weight: 400;
-}
+.cell-body.right { justify-content: flex-end; }
+.cell-body.is-range .cell-value { font-size: 19px; }
 
-/* price row: joined cells */
+.cell-value     { font-size: 24px; font-weight: 500; color: var(--n800); line-height: 1; white-space: nowrap; }
+.cell-value.dim { color: var(--n400); font-size: 20px; }
+.cell-unit      { font-size: 14px; font-style: italic; color: var(--n500); font-weight: 400; white-space: nowrap; }
+.cell-sep       { font-size: 14px; color: var(--n500); white-space: nowrap; }
+
+/* Joined price cells */
 .price-row { display: flex; }
 .price-cell {
   background: var(--n200);
   padding: 8px 12px 12px;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+  overflow: hidden;
 }
-.price-cell:first-child {
-  border-radius: var(--r-sm) 0 0 var(--r-sm);
-  flex: 0 0 149px;
-}
-.price-cell:last-child {
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
-  margin-left: 1px;
-}
-.price-label-hidden { opacity: 0; }
+.price-cell:active { background: #3a4250; }
+.price-cell:first-child { border-radius: var(--r) 0 0 var(--r); flex: 0 0 148px; }
+.price-cell:last-child  { border-radius: 0 var(--r) var(--r) 0; flex: 1; margin-left: 1px; }
 
 /* ── Price picker ────────────────────────────────────────── */
 
 .picker-wrap {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0;
-  position: relative;
   padding: 0 4px;
 }
-
-.picker-side-btn {
+.picker-btn {
   width: 52px;
-  height: 160px;
+  height: 148px;
   background: none;
   border: none;
   cursor: pointer;
@@ -219,138 +196,106 @@ html, body {
   align-items: center;
   justify-content: center;
   color: var(--n500);
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 300;
   font-family: var(--font);
   -webkit-tap-highlight-color: transparent;
-  border-radius: var(--r-sm);
+  border-radius: var(--r);
   transition: color 0.1s, background 0.1s;
   user-select: none;
   flex-shrink: 0;
 }
-.picker-side-btn:active {
-  color: var(--n800);
-  background: var(--n200);
-}
+.picker-btn:active { color: var(--n800); background: var(--n200); }
 
 .picker {
-  height: 160px;
-  overflow: hidden;
   flex: 1;
+  height: 148px;
+  overflow: hidden;
   position: relative;
   cursor: ns-resize;
   user-select: none;
   touch-action: none;
 }
-
-/* Fade gradients top & bottom */
-.picker::before,
-.picker::after {
+.picker::before, .picker::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
-  height: 50px;
-  z-index: 1;
+  height: 40px;
   pointer-events: none;
+  z-index: 2;
 }
-.picker::before {
-  top: 0;
-  background: linear-gradient(to bottom, var(--n100), transparent);
-}
-.picker::after {
-  bottom: 0;
-  background: linear-gradient(to top, var(--n100), transparent);
-}
+.picker::before { top: 0;    background: linear-gradient(to bottom, var(--n100), transparent); }
+.picker::after  { bottom: 0; background: linear-gradient(to top,   var(--n100), transparent); }
 
+.picker-rail {
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  left: 8px; right: 8px;
+  height: 42px;
+  border-top:    1px solid rgba(249,115,22,0.25);
+  border-bottom: 1px solid rgba(249,115,22,0.25);
+  background: rgba(249,115,22,0.05);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
 .picker-track {
   display: flex;
   flex-direction: column;
   align-items: center;
   will-change: transform;
 }
-
 .picker-item {
+  height: 37px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 500;
   font-family: var(--font);
-  height: 40px;
   width: 100%;
-  transition: font-size 0.12s, color 0.12s, opacity 0.12s;
 }
 
-/* ── Action chips ────────────────────────────────────────── */
+/* ── Chips ───────────────────────────────────────────────── */
 
-.chips-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
+.chips-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .chip {
   background: var(--n200);
   border: none;
   border-radius: var(--r-pill);
-  padding: 8px 14px 8px 12px;
+  padding: 9px 14px 9px 12px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.1s;
   font-family: var(--font);
+  transition: background 0.1s;
 }
 .chip:active { background: #3a4250; }
-.chip.has-value { background: var(--n300); }
-.chip.buyer-chip { background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.35); }
-.chip.buyer-chip:active { background: rgba(249,115,22,0.25); }
-
-.chip-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--n600);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.chip-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--n700);
-  letter-spacing: 0.1px;
-  line-height: 20px;
-  white-space: nowrap;
-}
-.chip.buyer-chip .chip-label { color: #fb923c; }
-.chip-remove {
-  font-size: 18px;
-  line-height: 1;
-  color: var(--n500);
-  margin-left: 2px;
-  display: flex;
-  align-items: center;
-}
+.chip.filled { background: var(--n300); }
+.chip.buyer  { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); }
+.chip.buyer:active { background: rgba(249,115,22,0.22); }
+.chip-icon   { width: 14px; height: 14px; color: var(--n600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.chip-label  { font-size: 14px; font-weight: 500; color: var(--n700); line-height: 20px; white-space: nowrap; }
+.chip.buyer .chip-label { color: #fb923c; }
+.chip-x      { font-size: 18px; line-height: 1; color: var(--n500); margin-left: 1px; display: flex; align-items: center; }
 
 /* ── Notes ───────────────────────────────────────────────── */
 
 .notes-cell {
   background: var(--n200);
-  border-radius: var(--r-sm);
+  border-radius: var(--r);
   padding: 8px 12px;
   min-height: 64px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.notes-textarea {
+.notes-ta {
   background: none;
   border: none;
   font-family: var(--font);
   font-size: 16px;
-  font-weight: 400;
   color: var(--n800);
   resize: none;
   width: 100%;
@@ -358,106 +303,105 @@ html, body {
   caret-color: var(--sell);
   min-height: 36px;
 }
-.notes-textarea::placeholder {
-  color: var(--n400);
-  font-style: italic;
-}
+.notes-ta::placeholder { color: var(--n400); font-style: italic; }
 
-/* ── Nav buttons ─────────────────────────────────────────── */
+/* ── Fixed bottom nav ────────────────────────────────────── */
 
-.nav-row {
+.nav-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
   display: flex;
-  gap: 16px;
-  flex-shrink: 0;
+  gap: 12px;
+  padding: 10px 16px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  background: linear-gradient(to bottom, transparent 0%, var(--n50) 35%);
+  pointer-events: none;
 }
+.nav-bar button { pointer-events: all; }
+
 .btn-prev {
   background: var(--n100);
   border: 1px solid var(--n200);
   border-radius: var(--r-pill);
-  padding: 16px 20px;
+  padding: 15px 20px;
   font-family: var(--font);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 500;
   color: var(--n800);
   cursor: pointer;
+  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
-  white-space: nowrap;
-  letter-spacing: 0.1px;
 }
-.btn-prev:active { background: var(--n200); }
+.btn-prev:active   { background: var(--n200); }
+.btn-prev:disabled { opacity: 0.3; pointer-events: none; }
+
 .btn-next {
   background: var(--n700);
   border: 1px solid var(--n900);
   border-radius: var(--r-pill);
-  padding: 16px 12px;
+  padding: 15px 12px;
   font-family: var(--font);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 500;
   color: var(--n50);
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
   flex: 1;
+  -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
-  letter-spacing: 0.1px;
 }
-.btn-next:active { background: var(--n600); }
+.btn-next:active   { background: var(--n600); }
+.btn-next:disabled { opacity: 0.3; pointer-events: none; }
 
-/* ── Bottom sheet shared ─────────────────────────────────── */
+/* ── Backdrop ────────────────────────────────────────────── */
 
 .backdrop {
-  position: absolute;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(0,0,0,0.55);
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0; pointer-events: none;
   transition: opacity 0.25s;
   z-index: 10;
 }
 .backdrop.open { opacity: 1; pointer-events: all; }
 
+/* ── Shared sheet ────────────────────────────────────────── */
+
 .sheet {
-  position: absolute;
+  position: fixed;
   bottom: 0; left: 0; right: 0;
   background: #252c36;
   border-radius: 20px 20px 0 0;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  z-index: 11;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 16px 40px;
-  max-height: 78%;
+  padding: 12px 16px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  z-index: 11;
 }
 .sheet.open { transform: translateY(0); }
 
 .sheet-handle {
-  width: 36px;
-  height: 4px;
+  width: 36px; height: 4px;
   background: var(--n300);
   border-radius: 2px;
   margin: 0 auto 4px;
   flex-shrink: 0;
 }
-.sheet-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--n800);
-  letter-spacing: 0.1px;
-  flex-shrink: 0;
-}
+.sheet-title { font-size: 18px; font-weight: 600; color: var(--n800); flex-shrink: 0; }
 
 /* ── Bidder sheet ────────────────────────────────────────── */
+
+#bidderSheet { max-height: 80dvh; }
 
 .sheet-search {
   background: var(--n200);
   border: none;
-  border-radius: var(--r-sm);
+  border-radius: var(--r);
   padding: 12px 14px;
   font-family: var(--font);
   font-size: 16px;
-  font-weight: 400;
   color: var(--n800);
   width: 100%;
   outline: none;
@@ -472,51 +416,42 @@ html, body {
   display: flex;
   flex-direction: column;
   scrollbar-width: none;
+  min-height: 0;
 }
 .bidder-list::-webkit-scrollbar { display: none; }
 
-.bidder-item {
-  padding: 14px 12px;
-  border-radius: var(--r-sm);
-  cursor: pointer;
+.bidder-row {
+  padding: 13px 12px;
+  border-radius: var(--r);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
   flex-shrink: 0;
 }
-.bidder-item:active { background: var(--n200); }
-.bidder-item.selected { background: rgba(249,115,22,0.08); }
+.bidder-row:active { background: var(--n200); }
+.bidder-row.sel    { background: rgba(249,115,22,0.07); }
+.bidder-name       { font-size: 17px; font-weight: 500; color: var(--n800); }
+.bidder-row.sel .bidder-name { color: #fb923c; }
 
-.bidder-name {
-  font-size: 17px;
-  font-weight: 500;
-  color: var(--n800);
-}
 .bidder-check {
-  width: 22px;
-  height: 22px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   border: 1.5px solid var(--n400);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   transition: background 0.1s, border-color 0.1s;
 }
-.bidder-item.selected .bidder-check {
-  background: var(--sell);
-  border-color: var(--sell);
-}
-.bidder-item.selected .bidder-name { color: #fb923c; }
+.bidder-row.sel .bidder-check { background: var(--sell); border-color: var(--sell); }
 
 .sheet-done {
   background: var(--n700);
   border: none;
   border-radius: var(--r-pill);
-  padding: 16px;
+  padding: 15px;
   font-family: var(--font);
   font-size: 17px;
   font-weight: 500;
@@ -525,48 +460,48 @@ html, body {
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
   flex-shrink: 0;
-  letter-spacing: 0.1px;
 }
 .sheet-done:active { background: var(--n600); }
 
-/* ── Weight entry sheet ──────────────────────────────────── */
+/* ── Numpad sheet ────────────────────────────────────────── */
 
-.weight-sheet {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: #252c36;
-  border-radius: 20px 20px 0 0;
-  transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  z-index: 12;
+.np-fields { display: flex; gap: 8px; }
+
+.np-field {
+  flex: 1;
+  background: var(--n200);
+  border-radius: var(--r);
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px 16px 40px;
+  gap: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
 }
-.weight-sheet.open { transform: translateY(0); }
+.np-field.active { border-color: rgba(249,115,22,0.5); }
 
-.weight-display {
-  font-size: 60px;
+.np-field-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--n600);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+.np-field-val {
+  font-size: 28px;
   font-weight: 500;
   color: var(--n800);
-  text-align: center;
-  padding: 12px 0;
+  line-height: 1.1;
   display: flex;
   align-items: baseline;
-  justify-content: center;
-  gap: 10px;
-  letter-spacing: -1px;
+  gap: 3px;
 }
-.weight-display .w-unit {
-  font-size: 24px;
-  font-style: italic;
-  color: var(--n500);
-  font-weight: 400;
-  letter-spacing: 0;
-}
+.np-field-val.empty { color: var(--n400); font-size: 22px; }
+.np-val-unit { font-size: 14px; font-style: italic; color: var(--n500); font-weight: 400; }
 
-.numpad {
+.np-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
@@ -574,219 +509,208 @@ html, body {
 .np-btn {
   background: var(--n200);
   border: none;
-  border-radius: var(--r-sm);
-  padding: 0;
-  height: 56px;
+  border-radius: var(--r);
+  height: 54px;
   font-family: var(--font);
   font-size: 22px;
   font-weight: 500;
   color: var(--n800);
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.1s;
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
 }
-.np-btn:active { background: #3a4250; }
-.np-btn.action { color: var(--n500); font-size: 16px; background: var(--n200); }
-.np-btn.confirm { background: var(--sell); color: white; font-size: 16px; font-weight: 600; }
-.np-btn.confirm:active { background: #ea6c0e; }
+.np-btn:active  { background: #3a4250; }
+.np-btn.sym     { color: var(--n500); font-size: 17px; }
+.np-btn.sym.off { opacity: 0.25; pointer-events: none; }
+.np-btn.set {
+  grid-column: 1 / -1;
+  background: var(--sell);
+  color: white;
+  font-size: 17px;
+  font-weight: 600;
+}
+.np-btn.set:active { background: #ea6c0e; }
 </style>
 </head>
 <body>
+<div class="page">
 
-<div class="phone" id="phone">
+  <div class="header">
+    <div class="lot-number" id="lotNumber">Lot 81</div>
+  </div>
 
-  <!-- ── Status bar ── -->
-  <div class="status-bar">
-    <span class="status-time">9:41</span>
-    <div class="status-icons">
-      <svg width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true">
-        <rect x="0"   y="4" width="3" height="8"  rx="1" fill="white" opacity="0.4"/>
-        <rect x="5"   y="2.5" width="3" height="9.5" rx="1" fill="white" opacity="0.6"/>
-        <rect x="10"  y="1" width="3" height="11" rx="1" fill="white" opacity="0.8"/>
-        <rect x="15"  y="0" width="3" height="12" rx="1" fill="white"/>
-      </svg>
-      <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
-        <path d="M8 4C9.7 4 11.2 4.7 12.3 5.8L13.7 4.4C12.2 2.9 10.2 2 8 2S3.8 2.9 2.3 4.4L3.7 5.8C4.8 4.7 6.3 4 8 4Z" fill="white"/>
-        <path d="M8 7C9 7 9.9 7.4 10.6 8.1L12 6.7C10.9 5.6 9.5 5 8 5S5.1 5.6 4 6.7L5.4 8.1C6.1 7.4 7 7 8 7Z" fill="white" opacity="0.7"/>
-        <circle cx="8" cy="10.5" r="1.5" fill="white"/>
-      </svg>
-      <svg width="26" height="12" viewBox="0 0 26 12" fill="none" aria-hidden="true">
-        <rect x="0.5" y="0.5" width="22" height="11" rx="3.5" stroke="white" stroke-opacity="0.35"/>
-        <rect x="2"   y="2"   width="17" height="8" rx="2" fill="white"/>
-        <path d="M24 4.5C24.8 4.8 25.5 5.4 25.5 6S24.8 7.2 24 7.5V4.5Z" fill="white" opacity="0.4"/>
-      </svg>
+  <div class="scroll-wrap">
+    <div class="content" id="content">
+      <div class="lot-card">
+
+        <div class="lot-info">
+          <div class="lot-vendor" id="lotVendor"></div>
+          <div class="lot-meta"   id="lotMeta"></div>
+        </div>
+
+        <div class="cell-row">
+          <div class="cell" onclick="openNumpad('tally')">
+            <div class="cell-label">Tally</div>
+            <div class="cell-body" id="tallyBody"></div>
+          </div>
+          <div class="cell" onclick="openNumpad('weight')">
+            <div class="cell-label">Weight</div>
+            <div class="cell-body right" id="weightBody"></div>
+          </div>
+        </div>
+
+        <div class="price-row">
+          <div class="price-cell" onclick="openNumpad('pricekg')">
+            <div class="cell-label">Price</div>
+            <div class="cell-body right" id="priceKgBody"></div>
+          </div>
+          <div class="price-cell" onclick="openNumpad('pricehead')">
+            <div class="cell-label" style="opacity:0">—</div>
+            <div class="cell-body right" id="priceHeadBody"></div>
+          </div>
+        </div>
+
+        <div class="picker-wrap">
+          <button class="picker-btn" id="btnMinus">−</button>
+          <div class="picker" id="picker">
+            <div class="picker-rail"></div>
+            <div class="picker-track" id="pickerTrack"></div>
+          </div>
+          <button class="picker-btn" id="btnPlus">+</button>
+        </div>
+
+        <div class="chips-row" id="chipsRow"></div>
+
+        <div class="notes-cell">
+          <div class="cell-label">Notes</div>
+          <textarea class="notes-ta" id="notesField" rows="2" placeholder="Add a note…"></textarea>
+        </div>
+
+      </div>
     </div>
   </div>
 
-  <!-- ── Scrollable content ── -->
-  <div class="content" id="content">
-
-    <div class="lot-heading" id="lotHeading">Lot 81</div>
-
-    <div class="lot-card">
-
-      <!-- Vendor info -->
-      <div class="lot-info">
-        <div class="lot-vendor">Jenna Keliwen Cattle</div>
-        <div class="lot-meta">
-          <span>3yr</span><span>Speckle Park</span><span>Breeding Bulls</span>
-        </div>
-      </div>
-
-      <!-- Tally + Weight -->
-      <div class="cell-row">
-        <div class="cell no-tap">
-          <div class="cell-label">Tally</div>
-          <div class="cell-value">2</div>
-        </div>
-        <div class="cell" id="weightCell" onclick="openWeightSheet()" role="button" aria-label="Edit weight">
-          <div class="cell-label">Weight</div>
-          <div class="cell-value right">
-            <span id="weightDisplay">255</span>
-            <span class="cell-unit">kg</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Price/kg + Price/head -->
-      <div class="price-row">
-        <div class="price-cell">
-          <div class="cell-label">Price</div>
-          <div class="cell-value right">
-            <span id="pricePerKg">3.10</span>
-            <span class="cell-unit">/kg</span>
-          </div>
-        </div>
-        <div class="price-cell">
-          <div class="cell-label price-label-hidden">—</div>
-          <div class="cell-value right">
-            <span id="pricePerHead">790.50</span>
-            <span class="cell-unit">/head</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Price picker -->
-      <div class="picker-wrap">
-        <button class="picker-side-btn" id="btnDown" aria-label="Lower price">−</button>
-        <div class="picker" id="picker">
-          <div class="picker-track" id="pickerTrack"></div>
-        </div>
-        <button class="picker-side-btn" id="btnUp" aria-label="Raise price">+</button>
-      </div>
-
-      <!-- Action chips -->
-      <div class="chips-row" id="chipsRow"></div>
-
-      <!-- Notes -->
-      <div class="notes-cell">
-        <div class="cell-label">Notes</div>
-        <textarea class="notes-textarea" rows="2" placeholder="Add a note…" aria-label="Lot notes"></textarea>
-      </div>
-
-    </div><!-- /lot-card -->
-
-    <!-- Navigation -->
-    <div class="nav-row">
-      <button class="btn-prev" onclick="navLot(-1)">Previous</button>
-      <button class="btn-next" onclick="navLot(1)">Next lot →</button>
-    </div>
-
-  </div><!-- /content -->
-
-  <!-- ── Bidder sheet backdrop ── -->
-  <div class="backdrop" id="bidderBackdrop" onclick="closeBidderSheet()"></div>
-
-  <!-- ── Bidder sheet ── -->
-  <div class="sheet" id="bidderSheet" role="dialog" aria-label="Select person">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title" id="sheetTitle">Select buyer</div>
-    <input class="sheet-search" id="sheetSearch" type="search" autocomplete="off" autocorrect="off" placeholder="Search bidders…" oninput="filterBidders()">
-    <div class="bidder-list" id="bidderList" role="listbox"></div>
-    <button class="sheet-done" id="sheetDoneBtn" onclick="closeBidderSheet()">Done</button>
+  <div class="nav-bar">
+    <button class="btn-prev" id="btnPrev" onclick="navigate(-1)">← Previous</button>
+    <button class="btn-next" id="btnNext" onclick="navigate(1)">Next lot →</button>
   </div>
 
-  <!-- ── Weight backdrop ── -->
-  <div class="backdrop" id="weightBackdrop" onclick="closeWeightSheet()" style="z-index:11"></div>
+</div>
 
-  <!-- ── Weight sheet ── -->
-  <div class="weight-sheet" id="weightSheet" role="dialog" aria-label="Enter weight">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">Enter weight</div>
-    <div class="weight-display">
-      <span id="weightInputDisplay">—</span>
-      <span class="w-unit">kg</span>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="sheet" id="bidderSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="bidderTitle">Select buyer</div>
+  <input class="sheet-search" id="bidderSearch" type="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search bidders…" oninput="filterBidders()">
+  <div class="bidder-list" id="bidderList"></div>
+  <button class="sheet-done" id="bidderDone" onclick="closeBidderSheet()">Done</button>
+</div>
+
+<div class="sheet" id="numpadSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="npTitle">Enter weight</div>
+  <div class="np-fields">
+    <div class="np-field active" id="npFieldFrom" onclick="setNpActive('from')">
+      <div class="np-field-label" id="npLabelFrom">From</div>
+      <div class="np-field-val empty" id="npValFrom">
+        <span id="npNumFrom">—</span>
+        <span class="np-val-unit" id="npUnitFrom">kg</span>
+      </div>
     </div>
-    <div class="numpad">
-      <button class="np-btn" onclick="numpad('7')">7</button>
-      <button class="np-btn" onclick="numpad('8')">8</button>
-      <button class="np-btn" onclick="numpad('9')">9</button>
-      <button class="np-btn" onclick="numpad('4')">4</button>
-      <button class="np-btn" onclick="numpad('5')">5</button>
-      <button class="np-btn" onclick="numpad('6')">6</button>
-      <button class="np-btn" onclick="numpad('1')">1</button>
-      <button class="np-btn" onclick="numpad('2')">2</button>
-      <button class="np-btn" onclick="numpad('3')">3</button>
-      <button class="np-btn action" onclick="numpad('del')">⌫</button>
-      <button class="np-btn" onclick="numpad('0')">0</button>
-      <button class="np-btn confirm" onclick="confirmWeight()">Set</button>
+    <div class="np-field" id="npFieldTo" onclick="setNpActive('to')">
+      <div class="np-field-label" id="npLabelTo">To (optional)</div>
+      <div class="np-field-val empty" id="npValTo">
+        <span id="npNumTo">—</span>
+        <span class="np-val-unit" id="npUnitTo">kg</span>
+      </div>
     </div>
   </div>
-
-</div><!-- /phone -->
+  <div class="np-grid">
+    <button class="np-btn" onclick="npKey('7')">7</button>
+    <button class="np-btn" onclick="npKey('8')">8</button>
+    <button class="np-btn" onclick="npKey('9')">9</button>
+    <button class="np-btn" onclick="npKey('4')">4</button>
+    <button class="np-btn" onclick="npKey('5')">5</button>
+    <button class="np-btn" onclick="npKey('6')">6</button>
+    <button class="np-btn" onclick="npKey('1')">1</button>
+    <button class="np-btn" onclick="npKey('2')">2</button>
+    <button class="np-btn" onclick="npKey('3')">3</button>
+    <button class="np-btn sym" id="npDel" onclick="npKey('del')">⌫</button>
+    <button class="np-btn sym" id="npDot" onclick="npKey('.')">.</button>
+    <button class="np-btn" onclick="npKey('0')">0</button>
+    <button class="np-btn set" onclick="npSet()">Set</button>
+  </div>
+</div>
 
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// Price picker
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Lot data ─────────────────────────────────────────────────────────────────
 
-const STEP       = 0.02;
-const START      = 0.50;
-const TOTAL      = 350;   // 0.50 → 7.48 $/kg
-const ITEM_H     = 40;    // px per picker slot
-const VISIBLE    = 4;     // items shown either side of center
+const LOTS = [
+  { num: 81, vendor: 'Jenna Keliwen Cattle', meta: '3yr · Speckle Park · Breeding Bulls',
+    tally: { from: 2, to: null }, weight: { from: 255, to: null }, priceIdx: 130 },
+  { num: 82, vendor: 'Parata Angus',          meta: '2yr · Angus · Heifers',
+    tally: { from: 8, to: null }, weight: { from: null, to: null }, priceIdx: 120 },
+  { num: 83, vendor: 'McKenzie Farming Co',   meta: '4yr · Hereford · Cows & Calves',
+    tally: { from: 3, to: null }, weight: { from: null, to: null }, priceIdx: 150 },
+];
 
-let priceIdx = Math.round((3.10 - START) / STEP); // start at 3.10
+const states = LOTS.map(lot => ({
+  tally:       { from: lot.tally.from,  to: lot.tally.to  },
+  weight:      { from: lot.weight.from, to: lot.weight.to },
+  priceIdx:    lot.priceIdx,
+  priceLowIdx: null,
+  headManual:  { from: null, to: null },
+  buyer:       null,
+  underbidders:[],
+  notes:       '',
+}));
+
+let lotIdx = 0;
+const S = () => states[lotIdx];
+
+// ─── Picker ───────────────────────────────────────────────────────────────────
+
+const STEP = 0.02, START = 0.50, TOTAL = 350, ITEM_H = 37, PCTR = 74;
 
 function getPrice(i) { return START + i * STEP; }
-function fmt(n, dp) { return n.toFixed(dp); }
+function fmtP(n)     { return n.toFixed(2); }
 
 function buildPicker() {
   const track = document.getElementById('pickerTrack');
   for (let i = 0; i < TOTAL; i++) {
     const el = document.createElement('div');
     el.className = 'picker-item';
-    el.textContent = fmt(getPrice(i), 2);
+    el.textContent = fmtP(getPrice(i));
     track.appendChild(el);
   }
-  positionPicker(false);
-  updatePriceDisplay();
 }
 
-function positionPicker(animate) {
+function applyPickerPos(animate, easing, dur) {
   const track = document.getElementById('pickerTrack');
-  // center the priceIdx item in the 160px picker
-  const offset = (160 / 2) - (priceIdx * ITEM_H) - (ITEM_H / 2);
-  track.style.transition = animate ? 'transform 0.18s cubic-bezier(0.22,1,0.36,1)' : 'none';
+  const offset = PCTR - S().priceIdx * ITEM_H - ITEM_H / 2;
+  track.style.transition = animate
+    ? `transform ${dur || 240}ms ${easing || 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'}`
+    : 'none';
   track.style.transform = `translateY(${offset}px)`;
-  stylePickerItems();
 }
 
-function stylePickerItems() {
+function styleItems() {
   const items = document.getElementById('pickerTrack').children;
+  const idx = S().priceIdx;
   for (let i = 0; i < items.length; i++) {
-    const dist = Math.abs(i - priceIdx);
+    const d = Math.abs(i - idx);
     let fs, col, op;
-    switch (dist) {
-      case 0: fs = '34px'; col = '#f2f4f6'; op = 1;    break;
-      case 1: fs = '22px'; col = '#c8cdd3'; op = 1;    break;
-      case 2: fs = '16px'; col = '#c8cdd3'; op = 0.65; break;
-      case 3: fs = '12px'; col = '#9ca3ac'; op = 0.45; break;
-      case 4: fs = '10px'; col = '#9ca3ac'; op = 0.25; break;
-      default: fs = '0px'; col = '#9ca3ac'; op = 0;    break;
+    switch (d) {
+      case 0: fs='34px'; col='#f2f4f6'; op=1;    break;
+      case 1: fs='22px'; col='#c8cdd3'; op=1;    break;
+      case 2: fs='16px'; col='#c8cdd3'; op=0.6;  break;
+      case 3: fs='12px'; col='#9ca3ac'; op=0.4;  break;
+      case 4: fs='10px'; col='#9ca3ac'; op=0.2;  break;
+      default:fs='0px';  col='#9ca3ac'; op=0;    break;
     }
     items[i].style.fontSize = fs;
     items[i].style.color    = col;
@@ -794,239 +718,368 @@ function stylePickerItems() {
   }
 }
 
-function updatePriceDisplay() {
-  const p = getPrice(priceIdx);
-  document.getElementById('pricePerKg').textContent = fmt(p, 2);
-  const w = parseInt(document.getElementById('weightDisplay').textContent, 10) || 0;
-  document.getElementById('pricePerHead').textContent = w > 0 ? fmt(p * w, 2) : '—';
-}
-
+// +/- buttons: spring-overshoot easing feels like a physical click-and-settle
 function movePicker(delta) {
-  priceIdx = Math.max(0, Math.min(TOTAL - 1, priceIdx + delta));
-  positionPicker(true);
-  updatePriceDisplay();
+  S().priceIdx = Math.max(0, Math.min(TOTAL - 1, S().priceIdx + delta));
+  applyPickerPos(true, 'cubic-bezier(0.175, 0.885, 0.32, 1.275)', 260);
+  styleItems();
+  updateCells();
 }
 
-document.getElementById('btnDown').addEventListener('click', () => movePicker(-1));
-document.getElementById('btnUp').addEventListener('click',   () => movePicker(1));
+document.getElementById('btnMinus').addEventListener('click', () => movePicker(-1));
+document.getElementById('btnPlus').addEventListener('click',  () => movePicker( 1));
 
-// Touch/pointer drag on picker
-let dragY0 = null, dragIdx0 = null, dragging = false;
+// Drag with momentum
+let dragging = false, dragY0 = 0, dragIdx0 = 0;
+let velY = 0, prevY = 0, prevT = 0, rafId = null;
 const pickerEl = document.getElementById('picker');
 
 pickerEl.addEventListener('pointerdown', e => {
-  dragY0 = e.clientY;
-  dragIdx0 = priceIdx;
+  if (rafId) cancelAnimationFrame(rafId);
   dragging = true;
+  dragY0 = e.clientY; dragIdx0 = S().priceIdx;
+  velY = 0; prevY = e.clientY; prevT = performance.now();
   pickerEl.setPointerCapture(e.pointerId);
   document.getElementById('pickerTrack').style.transition = 'none';
 });
+
 pickerEl.addEventListener('pointermove', e => {
   if (!dragging) return;
-  const dy = dragY0 - e.clientY; // drag up = positive
-  const steps = Math.round(dy / 24);
-  priceIdx = Math.max(0, Math.min(TOTAL - 1, dragIdx0 + steps));
-  positionPicker(false);
-  updatePriceDisplay();
+  const now = performance.now(), dt = now - prevT;
+  if (dt > 0) velY = (prevY - e.clientY) / dt;
+  prevY = e.clientY; prevT = now;
+  const dy = dragY0 - e.clientY;
+  S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(dragIdx0 + dy / ITEM_H)));
+  applyPickerPos(false);
+  styleItems();
+  updateCells();
 });
+
 pickerEl.addEventListener('pointerup', () => {
   dragging = false;
-  positionPicker(true);
+  let v = velY;
+  function coast() {
+    v *= 0.82;
+    if (Math.abs(v) < 0.03) {
+      applyPickerPos(true, 'cubic-bezier(0.22, 1, 0.36, 1)', 160);
+      return;
+    }
+    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx + v * 1.4)));
+    applyPickerPos(false);
+    styleItems();
+    updateCells();
+    rafId = requestAnimationFrame(coast);
+  }
+  rafId = requestAnimationFrame(coast);
 });
 
-buildPicker();
+// ─── Cell rendering ───────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bidder data
-// ─────────────────────────────────────────────────────────────────────────────
-
-const BIDDERS = [
-  'Aaron Fitzgerald', 'Abigail Turner', 'Ben Mackay', 'Blake Morrison',
-  'Brad Sutherland', 'Callum McKenzie', 'Cameron Taufa', 'Christine Dawson',
-  'Craig Nelson', 'David Forsyth', 'Dean Parata', 'Deborah Halliday',
-  'Dylan Walsh', 'Emma Whitfield', 'Ethan Hemi', 'Fiona Campbell',
-  'Gareth Owen', 'Grant Stirling', 'Hannah Beattie', 'Hunter Collins',
-  'Jade Rawiri', 'James O\'Brien', 'Jason Ngata', 'Jessica Lambert',
-  'Jonathan Cairns', 'Josh Tane', 'Karen Blackwell', 'Katrina Holland',
-  'Kyle Robertson', 'Laura Sinclair', 'Liam Brunton', 'Lisa Hendricks',
-  'Mark Currie', 'Matt Tūhoe', 'Melissa Grant', 'Michael Ahern',
-  'Mike Fraser', 'Nathan Reid', 'Nicole Perkins', 'Olivia Stewart',
-  'Paul Whaanga', 'Peter Donaldson', 'Rachel Bennett', 'Rebecca Ellis',
-  'Ross Mackay', 'Ryan Coster', 'Sam Henare', 'Sarah Thompson',
-  'Scott Buchanan', 'Shannon Kerr', 'Shaun Matenga', 'Simon Lockwood',
-  'Stephanie Hayes', 'Steve Patterson', 'Stuart Piper', 'Tania Ngāpō',
-  'Tim Ashby', 'Todd Galloway', 'Tony Parata', 'Tracy Williams',
-  'Warren Hunter',
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Lot state
-// ─────────────────────────────────────────────────────────────────────────────
-
-let buyer = null;
-let underbidders = new Set();
-let sheetMode = null;      // 'buyer' | 'underbidder'
-let tempUBs = new Set();
-
-function plusIcon() {
-  return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-    <line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  </svg>`;
-}
-function checkIcon() {
-  return `<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true">
-    <path d="M1 5l3.5 3.5L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-}
-function clockIcon() {
-  return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-    <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/>
-    <path d="M7 4.5v2.8l1.8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-  </svg>`;
+function renderCell(id, from, to, unit, rightAlign) {
+  const el = document.getElementById(id);
+  el.classList.toggle('right', !!rightAlign);
+  el.classList.toggle('is-range', from !== null && to !== null);
+  if (from === null || from === undefined) {
+    el.innerHTML = `<span class="cell-value dim">—</span>${unit ? `<span class="cell-unit">${unit}</span>` : ''}`;
+    return;
+  }
+  let html = `<span class="cell-value">${from}</span>`;
+  if (to !== null && to !== undefined) {
+    html += `<span class="cell-sep">&thinsp;–&thinsp;</span><span class="cell-value">${to}</span>`;
+  }
+  if (unit) html += `<span class="cell-unit">${unit}</span>`;
+  el.innerHTML = html;
 }
 
-function renderChips() {
-  const row = document.getElementById('chipsRow');
-  let html = '';
+function computeHead() {
+  const s = S();
+  if (!s.weight.from) return { from: null, to: null };
+  const pHi = getPrice(s.priceIdx);
+  const pLo = s.priceLowIdx !== null ? getPrice(s.priceLowIdx) : pHi;
+  const low  = Math.min(pLo, pHi) * s.weight.from;
+  const high = Math.max(pLo, pHi) * (s.weight.to || s.weight.from);
+  if (Math.abs(low - high) < 0.005) return { from: low.toFixed(2), to: null };
+  return { from: low.toFixed(2), to: high.toFixed(2) };
+}
 
-  // Buyer chip
-  if (buyer) {
-    html += `<button class="chip buyer-chip" onclick="openBidderSheet('buyer')" aria-label="Change buyer">
-      <span class="chip-label">${buyer}</span>
-      <span class="chip-remove" onclick="event.stopPropagation(); clearBuyer()" aria-label="Remove buyer">×</span>
-    </button>`;
+function updateCells() {
+  const s = S();
+  renderCell('tallyBody',    s.tally.from,  s.tally.to,  '');
+  renderCell('weightBody',   s.weight.from, s.weight.to, 'kg', true);
+
+  const pHiStr = fmtP(getPrice(s.priceIdx));
+  const pLoStr = s.priceLowIdx !== null ? fmtP(getPrice(s.priceLowIdx)) : null;
+  renderCell('priceKgBody', pLoStr || pHiStr, pLoStr ? pHiStr : null, '/kg', true);
+
+  if (s.headManual.from !== null) {
+    renderCell('priceHeadBody', s.headManual.from, s.headManual.to, '/head', true);
   } else {
-    html += `<button class="chip" onclick="openBidderSheet('buyer')" aria-label="Add buyer">
-      <span class="chip-icon">${plusIcon()}</span>
-      <span class="chip-label">Buyer</span>
-    </button>`;
+    const h = computeHead();
+    renderCell('priceHeadBody', h.from, h.to, '/head', true);
+  }
+}
+
+// ─── Numpad ───────────────────────────────────────────────────────────────────
+
+let npMode = null, npActive = 'from', npFrom = '', npTo = '';
+
+const NP_CFG = {
+  tally:     { title: 'Enter tally',     unit: '',      maxLen: 4, decimal: false,
+               labelFrom: 'From', labelTo: 'To (optional)' },
+  weight:    { title: 'Enter weight',    unit: 'kg',    maxLen: 4, decimal: false,
+               labelFrom: 'From', labelTo: 'To (optional)' },
+  pricekg:   { title: 'Set price /kg',   unit: '/kg',   maxLen: 5, decimal: true,
+               labelFrom: 'Low (optional)', labelTo: 'Main' },
+  pricehead: { title: 'Set price /head', unit: '/head', maxLen: 7, decimal: true,
+               labelFrom: 'From', labelTo: 'To (optional)' },
+};
+
+function openNumpad(mode) {
+  npMode = mode;
+  const s = S(), cfg = NP_CFG[mode];
+
+  if (mode === 'tally') {
+    npFrom = s.tally.from !== null ? String(s.tally.from) : '';
+    npTo   = s.tally.to   !== null ? String(s.tally.to)   : '';
+    npActive = 'from';
+  } else if (mode === 'weight') {
+    npFrom = s.weight.from !== null ? String(s.weight.from) : '';
+    npTo   = s.weight.to   !== null ? String(s.weight.to)   : '';
+    npActive = 'from';
+  } else if (mode === 'pricekg') {
+    npFrom = s.priceLowIdx !== null ? fmtP(getPrice(s.priceLowIdx)) : '';
+    npTo   = fmtP(getPrice(s.priceIdx));
+    npActive = 'to';
+  } else if (mode === 'pricehead') {
+    npFrom = s.headManual.from !== null ? String(s.headManual.from) : '';
+    npTo   = s.headManual.to   !== null ? String(s.headManual.to)   : '';
+    npActive = 'from';
   }
 
-  // Underbidder chips — each selected person shown, plus add button
-  underbidders.forEach(name => {
-    html += `<button class="chip has-value" onclick="openBidderSheet('underbidder')" aria-label="Edit underbidders">
-      <span class="chip-label">${name}</span>
-      <span class="chip-remove" onclick="event.stopPropagation(); removeUnderbidder('${name.replace(/'/g,"\\'")}')">×</span>
-    </button>`;
-  });
-  html += `<button class="chip" onclick="openBidderSheet('underbidder')" aria-label="Add underbidder">
-    <span class="chip-icon">${plusIcon()}</span>
-    <span class="chip-label">Underbidder</span>
-  </button>`;
+  document.getElementById('npTitle').textContent     = cfg.title;
+  document.getElementById('npLabelFrom').textContent = cfg.labelFrom;
+  document.getElementById('npLabelTo').textContent   = cfg.labelTo;
+  document.getElementById('npUnitFrom').textContent  = cfg.unit;
+  document.getElementById('npUnitTo').textContent    = cfg.unit;
+  document.getElementById('npDot').classList.toggle('off', !cfg.decimal);
 
-  // Stud date chip
-  html += `<button class="chip" onclick="alert('Stud date — coming soon')" aria-label="Add stud date">
-    <span class="chip-icon">${clockIcon()}</span>
-    <span class="chip-label">Stud date</span>
-  </button>`;
-
-  row.innerHTML = html;
+  renderNpFields();
+  openSheet('numpad');
 }
 
-function clearBuyer() { buyer = null; renderChips(); }
-function removeUnderbidder(name) { underbidders.delete(name); renderChips(); }
+function setNpActive(which) { npActive = which; renderNpFields(); }
 
-renderChips();
+function renderNpFields() {
+  const set = (fieldId, valId, numId, str, isActive) => {
+    document.getElementById(fieldId).classList.toggle('active', isActive);
+    const valEl = document.getElementById(valId);
+    valEl.classList.toggle('empty', !str);
+    document.getElementById(numId).textContent = str || '—';
+  };
+  set('npFieldFrom', 'npValFrom', 'npNumFrom', npFrom, npActive === 'from');
+  set('npFieldTo',   'npValTo',   'npNumTo',   npTo,   npActive === 'to');
+}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bidder sheet
-// ─────────────────────────────────────────────────────────────────────────────
+function npKey(key) {
+  const cfg = NP_CFG[npMode];
+  let cur = npActive === 'from' ? npFrom : npTo;
+
+  if (key === 'del') {
+    cur = cur.slice(0, -1);
+  } else if (key === '.') {
+    if (cfg.decimal && !cur.includes('.') && cur.length > 0) cur += '.';
+  } else {
+    const dot = cur.indexOf('.');
+    const tooManyDp = dot >= 0 && (cur.length - dot) > 2;
+    if (!tooManyDp && cur.length < cfg.maxLen) cur += key;
+  }
+
+  if (npActive === 'from') npFrom = cur; else npTo = cur;
+  renderNpFields();
+}
+
+function priceStrToIdx(str) {
+  const n = parseFloat(str);
+  return isNaN(n) ? null : Math.max(0, Math.min(TOTAL - 1, Math.round((n - START) / STEP)));
+}
+
+function npSet() {
+  const s = S();
+  const pF = str => { const n = parseFloat(str); return isNaN(n) ? null : n; };
+
+  if (npMode === 'tally') {
+    s.tally.from = pF(npFrom); s.tally.to = pF(npTo);
+
+  } else if (npMode === 'weight') {
+    s.weight.from = pF(npFrom); s.weight.to = pF(npTo);
+    s.headManual = { from: null, to: null };
+
+  } else if (npMode === 'pricekg') {
+    const hi = priceStrToIdx(npTo), lo = priceStrToIdx(npFrom);
+    if (hi !== null) { s.priceIdx = hi; applyPickerPos(true, 'cubic-bezier(0.22,1,0.36,1)', 300); }
+    s.priceLowIdx = lo;
+    s.headManual = { from: null, to: null };
+
+  } else if (npMode === 'pricehead') {
+    s.headManual.from = pF(npFrom); s.headManual.to = pF(npTo);
+  }
+
+  closeSheet('numpad');
+  styleItems();
+  updateCells();
+}
+
+// ─── Bidder sheet ─────────────────────────────────────────────────────────────
+
+const BIDDERS = [
+  'Aaron Fitzgerald','Abigail Turner','Ben Mackay','Blake Morrison',
+  'Brad Sutherland','Callum McKenzie','Cameron Taufa','Christine Dawson',
+  'Craig Nelson','David Forsyth','Dean Parata','Deborah Halliday',
+  'Dylan Walsh','Emma Whitfield','Ethan Hemi','Fiona Campbell',
+  'Gareth Owen','Grant Stirling','Hannah Beattie','Hunter Collins',
+  'Jade Rawiri',"James O'Brien",'Jason Ngata','Jessica Lambert',
+  'Jonathan Cairns','Josh Tane','Karen Blackwell','Katrina Holland',
+  'Kyle Robertson','Laura Sinclair','Liam Brunton','Lisa Hendricks',
+  'Mark Currie','Matt Tūhoe','Melissa Grant','Michael Ahern',
+  'Mike Fraser','Nathan Reid','Nicole Perkins','Olivia Stewart',
+  'Paul Whaanga','Peter Donaldson','Rachel Bennett','Rebecca Ellis',
+  'Ross Mackay','Ryan Coster','Sam Henare','Sarah Thompson',
+  'Scott Buchanan','Shannon Kerr','Shaun Matenga','Simon Lockwood',
+  'Stephanie Hayes','Steve Patterson','Stuart Piper','Tania Ngāpō',
+  'Tim Ashby','Todd Galloway','Tony Parata','Tracy Williams','Warren Hunter',
+];
+
+let bidderMode = null, tempUBs = [];
 
 function openBidderSheet(mode) {
-  sheetMode = mode;
-  tempUBs = new Set(underbidders);
+  bidderMode = mode;
+  tempUBs = [...S().underbidders];
   const isUB = mode === 'underbidder';
-  document.getElementById('sheetTitle').textContent = isUB ? 'Select underbidders' : 'Select buyer';
-  document.getElementById('sheetDoneBtn').style.display = isUB ? 'block' : 'none';
-  document.getElementById('sheetSearch').value = '';
+  document.getElementById('bidderTitle').textContent  = isUB ? 'Select underbidders' : 'Select buyer';
+  document.getElementById('bidderDone').style.display = isUB ? 'block' : 'none';
+  document.getElementById('bidderSearch').value = '';
   filterBidders();
-  document.getElementById('bidderBackdrop').classList.add('open');
-  document.getElementById('bidderSheet').classList.add('open');
-  setTimeout(() => document.getElementById('sheetSearch').focus(), 320);
+  openSheet('bidder');
+  setTimeout(() => document.getElementById('bidderSearch').focus(), 320);
 }
 
 function closeBidderSheet() {
-  if (sheetMode === 'underbidder') underbidders = new Set(tempUBs);
-  document.getElementById('bidderBackdrop').classList.remove('open');
-  document.getElementById('bidderSheet').classList.remove('open');
+  if (bidderMode === 'underbidder') S().underbidders = [...tempUBs];
+  closeSheet('bidder');
   renderChips();
 }
 
 function filterBidders() {
-  const q = document.getElementById('sheetSearch').value.toLowerCase().trim();
-  const list = document.getElementById('bidderList');
-  const results = q ? BIDDERS.filter(b => b.toLowerCase().includes(q)) : BIDDERS;
-
-  list.innerHTML = results.map(name => {
-    const sel = sheetMode === 'buyer' ? buyer === name : tempUBs.has(name);
-    const safeName = name.replace(/'/g, "\\'");
-    return `<div class="bidder-item${sel ? ' selected' : ''}" role="option" aria-selected="${sel}"
-        onclick="selectBidder('${safeName}')">
+  const q = document.getElementById('bidderSearch').value.toLowerCase().trim();
+  const hits = q ? BIDDERS.filter(b => b.toLowerCase().includes(q)) : BIDDERS;
+  document.getElementById('bidderList').innerHTML = hits.map(name => {
+    const sel  = bidderMode === 'buyer' ? S().buyer === name : tempUBs.includes(name);
+    const safe = name.replace(/'/g, "\\'");
+    return `<div class="bidder-row${sel?' sel':''}" onclick="selectBidder('${safe}')">
       <span class="bidder-name">${name}</span>
-      <div class="bidder-check">${sel ? checkIcon() : ''}</div>
+      <div class="bidder-check">${sel?chkSvg():''}</div>
     </div>`;
   }).join('');
 }
 
 function selectBidder(name) {
-  if (sheetMode === 'buyer') {
-    buyer = name;
-    closeBidderSheet();
-  } else {
-    if (tempUBs.has(name)) tempUBs.delete(name);
-    else tempUBs.add(name);
+  if (bidderMode === 'buyer') { S().buyer = name; closeBidderSheet(); }
+  else {
+    const i = tempUBs.indexOf(name);
+    i >= 0 ? tempUBs.splice(i,1) : tempUBs.push(name);
     filterBidders();
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Weight sheet
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Chips ────────────────────────────────────────────────────────────────────
 
-let wStr = '';
-
-function openWeightSheet() {
-  const cur = document.getElementById('weightDisplay').textContent;
-  wStr = (cur && cur !== '—') ? cur : '';
-  document.getElementById('weightInputDisplay').textContent = wStr || '—';
-  document.getElementById('weightBackdrop').classList.add('open');
-  document.getElementById('weightSheet').classList.add('open');
+function plusSvg() {
+  return `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><line x1="6.5" y1="1" x2="6.5" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+}
+function chkSvg() {
+  return `<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-function closeWeightSheet() {
-  document.getElementById('weightBackdrop').classList.remove('open');
-  document.getElementById('weightSheet').classList.remove('open');
+function renderChips() {
+  const s = S();
+  let html = s.buyer
+    ? `<button class="chip buyer" onclick="openBidderSheet('buyer')">
+        <span class="chip-label">${s.buyer}</span>
+        <span class="chip-x" onclick="event.stopPropagation();S().buyer=null;renderChips()">×</span>
+       </button>`
+    : `<button class="chip" onclick="openBidderSheet('buyer')">
+        <span class="chip-icon">${plusSvg()}</span>
+        <span class="chip-label">Buyer</span>
+       </button>`;
+
+  s.underbidders.forEach(name => {
+    const safe = name.replace(/'/g, "\\'");
+    html += `<button class="chip filled" onclick="openBidderSheet('underbidder')">
+      <span class="chip-label">${name}</span>
+      <span class="chip-x" onclick="event.stopPropagation();removeUB('${safe}')">×</span>
+    </button>`;
+  });
+
+  html += `<button class="chip" onclick="openBidderSheet('underbidder')">
+    <span class="chip-icon">${plusSvg()}</span>
+    <span class="chip-label">Underbidder</span>
+  </button>`;
+
+  document.getElementById('chipsRow').innerHTML = html;
 }
 
-function numpad(key) {
-  if (key === 'del') {
-    wStr = wStr.slice(0, -1);
-  } else if (wStr.length < 4) {
-    wStr += key;
-  }
-  document.getElementById('weightInputDisplay').textContent = wStr || '—';
+function removeUB(name) { S().underbidders = S().underbidders.filter(n=>n!==name); renderChips(); }
+
+// ─── Sheets ───────────────────────────────────────────────────────────────────
+
+function openSheet(which) {
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById(which==='bidder'?'bidderSheet':'numpadSheet').classList.add('open');
+  document.getElementById('backdrop').onclick = () =>
+    which==='bidder' ? closeBidderSheet() : closeSheet('numpad');
+}
+function closeSheet(which) {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById(which==='bidder'?'bidderSheet':'numpadSheet').classList.remove('open');
 }
 
-function confirmWeight() {
-  if (wStr) {
-    document.getElementById('weightDisplay').textContent = wStr;
-    updatePriceDisplay();
-  }
-  closeWeightSheet();
+// ─── Navigation ──────────────────────────────────────────────────────────────
+
+function saveCurrent() { S().notes = document.getElementById('notesField').value; }
+
+function loadLot() {
+  const lot = LOTS[lotIdx], s = S();
+  document.getElementById('lotNumber').textContent = `Lot ${lot.num}`;
+  document.getElementById('lotVendor').textContent = lot.vendor;
+  document.getElementById('lotMeta').textContent   = lot.meta;
+  document.getElementById('notesField').value      = s.notes;
+  document.getElementById('btnPrev').disabled = lotIdx === 0;
+  document.getElementById('btnNext').disabled = lotIdx === LOTS.length - 1;
+  applyPickerPos(false);
+  styleItems();
+  updateCells();
+  renderChips();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Lot navigation (prototype stub)
-// ─────────────────────────────────────────────────────────────────────────────
-
-let lotNum = 81;
-
-function navLot(dir) {
-  lotNum = Math.max(1, lotNum + dir);
-  document.getElementById('lotHeading').textContent = `Lot ${lotNum}`;
-  // In a real app, load lot data here
+function navigate(dir) {
+  saveCurrent();
+  const c = document.getElementById('content');
+  const outCls = dir > 0 ? 'out-left' : 'out-right';
+  const inCls  = dir > 0 ? 'in-right' : 'in-left';
+  c.classList.add(outCls);
+  c.addEventListener('animationend', () => {
+    c.classList.remove(outCls);
+    lotIdx += dir;
+    loadLot();
+    c.classList.add(inCls);
+    c.addEventListener('animationend', () => c.classList.remove(inCls), { once: true });
+  }, { once: true });
 }
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+buildPicker();
+loadLot();
 </script>
 </body>
 </html>
