@@ -55,18 +55,15 @@ body {
   position: relative;
 }
 
-/* ── Header ──────────────────────────────────────────────── */
+/* ── Lot heading (inside content, slides with card) ──────── */
 
-.header {
-  flex-shrink: 0;
-  padding: 10px 16px 6px;
-  text-align: center;
-}
 .lot-number {
   font-size: 20px;
   font-weight: 600;
   color: var(--n800);
   letter-spacing: 0.1px;
+  text-align: center;
+  padding: 4px 0 2px;
 }
 
 /* ── Scroll area ─────────────────────────────────────────── */
@@ -335,7 +332,7 @@ body {
 
 /* ── Narrow cell (tally) ─────────────────────────────────── */
 
-.cell-narrow { flex: 0 0 110px !important; }
+.cell-narrow { flex: 0 0 148px !important; }
 
 /* ── New client inline form ──────────────────────────────── */
 
@@ -621,12 +618,9 @@ body {
 <body>
 <div class="page">
 
-  <div class="header">
-    <div class="lot-number" id="lotNumber">Lot 81</div>
-  </div>
-
   <div class="scroll-wrap">
     <div class="content" id="content">
+      <div class="lot-number" id="lotNumber">Lot 81</div>
       <div class="lot-card">
 
         <div class="lot-info">
