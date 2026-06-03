@@ -233,9 +233,9 @@ body {
   top: 50%; transform: translateY(-50%);
   left: 8px; right: 8px;
   height: 42px;
-  border-top:    1px solid rgba(249,115,22,0.25);
-  border-bottom: 1px solid rgba(249,115,22,0.25);
-  background: rgba(249,115,22,0.05);
+  border-top:    1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
   border-radius: 4px;
   pointer-events: none;
   z-index: 1;
@@ -247,37 +247,45 @@ body {
   will-change: transform;
 }
 .picker-item {
-  height: 37px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 500;
   font-family: var(--font);
   width: 100%;
+  overflow: hidden;
+  transition: height 0.12s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              font-size 0.12s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              color 0.12s, opacity 0.12s;
 }
 
-/* ── Picker mode toggle ──────────────────────────────────── */
+/* ── Picker control row (mode + increments) ──────────────── */
 
-.picker-mode-row {
+.picker-ctrl-row {
   display: flex;
+  align-items: center;
   justify-content: center;
-  margin-bottom: -4px;
+  gap: 6px;
+  padding: 0 4px;
+  margin-bottom: 2px;
 }
 .picker-mode-btn {
   background: var(--n200);
   border: none;
   border-radius: var(--r-pill);
-  padding: 4px 14px;
+  padding: 5px 12px;
   font-family: var(--font);
   font-size: 12px;
   font-weight: 500;
   color: var(--n500);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s, background 0.15s;
+  touch-action: manipulation;
+  transition: background 0.15s, color 0.15s;
   letter-spacing: 0.3px;
+  white-space: nowrap;
 }
-.picker-mode-btn.head { color: var(--sell); background: rgba(249,115,22,0.12); }
+.picker-mode-btn.head { background: var(--n700); color: var(--n50); }
 
 /* ── Chips ───────────────────────────────────────────────── */
 
@@ -306,28 +314,23 @@ body {
 
 /* ── Increment selector ──────────────────────────────────── */
 
-.inc-row {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin-top: -4px;
-}
+.inc-row { display: flex; align-items: center; gap: 4px; }
 .inc-btn {
-  background: var(--n200);
+  background: none;
   border: none;
   border-radius: var(--r-pill);
-  padding: 5px 13px;
+  padding: 4px 10px;
   font-family: var(--font);
   font-size: 12px;
   font-weight: 500;
-  color: var(--n500);
+  color: var(--n400);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   transition: background 0.1s, color 0.1s;
   letter-spacing: 0.2px;
 }
-.inc-btn.active { background: rgba(249,115,22,0.14); color: var(--sell); }
+.inc-btn.active { background: var(--n700); color: var(--n50); }
 .inc-btn:active { opacity: 0.7; }
 
 /* ── Narrow cell (tally) ─────────────────────────────────── */
@@ -653,8 +656,9 @@ body {
           </div>
         </div>
 
-        <div class="picker-mode-row">
+        <div class="picker-ctrl-row">
           <button class="picker-mode-btn" id="pickerModeBtn" onclick="togglePickerMode()">$/kg</button>
+          <div class="inc-row" id="incRow"></div>
         </div>
 
         <div class="picker-wrap">
@@ -665,8 +669,6 @@ body {
           </div>
           <button class="picker-btn" id="btnPlus">+</button>
         </div>
-
-        <div class="inc-row" id="incRow"></div>
 
         <div class="chips-row" id="chipsRow"></div>
 
@@ -767,7 +769,24 @@ const S = () => states[lotIdx];
 
 // ─── Picker ───────────────────────────────────────────────────────────────────
 
-const STEP = 0.02, START = 0.50, TOTAL = 350, ITEM_H = 37, PCTR = 100;
+const STEP = 0.02, START = 0.50, TOTAL = 350, PCTR = 100;
+
+// Variable item heights by distance from centre — reduces gap between outliers
+// without changing the feel of centre ↔ ±1
+const ITEM_HEIGHTS = [42, 34, 22, 16, 12];
+function getItemH(d) { return d < ITEM_HEIGHTS.length ? ITEM_HEIGHTS[d] : 0; }
+
+// Precomputed track offsets: offset[idx] = translateY that centres item idx
+const pickerOffsets = new Float32Array(TOTAL);
+function precomputeOffsets() {
+  for (let idx = 0; idx < TOTAL; idx++) {
+    let sum = 0;
+    for (let i = 0; i < idx; i++) sum += getItemH(Math.abs(i - idx));
+    pickerOffsets[idx] = PCTR - ITEM_HEIGHTS[0] / 2 - sum;
+  }
+}
+
+const DRAG_SENS = 34; // pixels per index step during drag
 
 function getPrice(i) { return START + i * STEP; }
 function fmtP(n)     { return n.toFixed(2); }
@@ -832,15 +851,15 @@ function buildPicker() {
     el.textContent = getPickerLabel(i);
     track.appendChild(el);
   }
+  precomputeOffsets();
 }
 
 function applyPickerPos(animate, easing, dur) {
   const track = document.getElementById('pickerTrack');
-  const offset = PCTR - S().priceIdx * ITEM_H - ITEM_H / 2;
   track.style.transition = animate
     ? `transform ${dur || 120}ms ${easing || 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'}`
     : 'none';
-  track.style.transform = `translateY(${offset}px)`;
+  track.style.transform = `translateY(${pickerOffsets[S().priceIdx]}px)`;
 }
 
 function styleItems() {
@@ -848,15 +867,16 @@ function styleItems() {
   const idx = S().priceIdx;
   for (let i = 0; i < items.length; i++) {
     const d = Math.abs(i - idx);
-    let fs, col, op;
+    let h, fs, col, op;
     switch (d) {
-      case 0: fs='34px'; col='#f2f4f6'; op=1;    break;
-      case 1: fs='22px'; col='#c8cdd3'; op=1;    break;
-      case 2: fs='16px'; col='#c8cdd3'; op=0.6;  break;
-      case 3: fs='12px'; col='#9ca3ac'; op=0.4;  break;
-      case 4: fs='10px'; col='#9ca3ac'; op=0.2;  break;
-      default:fs='0px';  col='#9ca3ac'; op=0;    break;
+      case 0: h=42; fs='34px'; col='#f2f4f6'; op=1;    break;
+      case 1: h=34; fs='20px'; col='#c8cdd3'; op=1;    break;
+      case 2: h=22; fs='14px'; col='#c8cdd3'; op=0.65; break;
+      case 3: h=16; fs='11px'; col='#9ca3ac'; op=0.4;  break;
+      case 4: h=12; fs='9px';  col='#9ca3ac'; op=0.2;  break;
+      default:h=0;  fs='0px';  col='#9ca3ac'; op=0;    break;
     }
+    items[i].style.height   = h + 'px';
     items[i].style.fontSize = fs;
     items[i].style.color    = col;
     items[i].style.opacity  = op;
@@ -893,7 +913,7 @@ pickerEl.addEventListener('pointermove', e => {
   if (dt > 0) velY = (prevY - e.clientY) / dt;
   prevY = e.clientY; prevT = now;
   const dy = dragY0 - e.clientY;
-  S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(dragIdx0 + dy / ITEM_H)));
+  S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(dragIdx0 + dy / DRAG_SENS)));
   applyPickerPos(false);
   styleItems();
   updateCells();
