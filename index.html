@@ -368,8 +368,11 @@ body {
 }
 .chip:active { background: #3a4250; }
 .chip.filled { background: var(--n300); }
-.chip.buyer  { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); }
+.chip.buyer    { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); }
 .chip.buyer:active { background: rgba(249,115,22,0.22); }
+.chip.not-sold { background: #be3030; border: none; border-top: 1px solid #ef4444; }
+.chip.not-sold:active { background: #a82828; }
+.chip.not-sold .chip-label { color: var(--n800); }
 .chip-icon   { width: 14px; height: 14px; color: var(--n600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .chip-label  { font-size: 14px; font-weight: 500; color: var(--n700); line-height: 20px; white-space: nowrap; }
 .chip.buyer .chip-label { color: #fb923c; }
@@ -1299,6 +1302,9 @@ function selectBidder(name) {
 function plusSvg() {
   return `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><line x1="6.5" y1="1" x2="6.5" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 }
+function noSvg() {
+  return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><line x1="2.5" y1="2.5" x2="11.5" y2="11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+}
 function chkSvg() {
   return `<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
@@ -1331,9 +1337,9 @@ function renderChips() {
   // Not sold chip
   const ns = S().notSold;
   html += ns
-    ? `<button class="chip filled" onclick="S().notSold=false;renderChips()">
+    ? `<button class="chip not-sold" onclick="S().notSold=false;renderChips()">
+        <span class="chip-icon">${noSvg()}</span>
         <span class="chip-label">Not sold</span>
-        <span class="chip-x" onclick="event.stopPropagation();S().notSold=false;renderChips()">×</span>
        </button>`
     : `<button class="chip" onclick="S().notSold=true;renderChips()">
         <span class="chip-icon">${plusSvg()}</span>
