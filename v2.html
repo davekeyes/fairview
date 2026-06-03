@@ -369,7 +369,7 @@ body {
 .btn-next-inner { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: center; }
 .btn-next-label { font-size: 12px; font-weight: 500; color: var(--n600); letter-spacing: 0.6px; text-transform: uppercase; line-height: 1.4; }
 .btn-next-desc  { font-size: 15px; font-weight: 500; color: var(--n700); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.btn-next-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--n600); font-size: 18px; line-height: 1; }
+.btn-next-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--n600); display: flex; align-items: center; }
 
 /* ── Backdrop ───────────────────────────────────────────────── */
 
@@ -545,7 +545,7 @@ body {
             <div class="btn-next-label" id="btnNextLabel">Next lot</div>
             <div class="btn-next-desc"  id="btnNextSub"></div>
           </div>
-          <span class="btn-next-arrow">›</span>
+          <span class="btn-next-arrow"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 4l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
       </div>
 
