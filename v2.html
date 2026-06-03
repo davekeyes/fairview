@@ -269,7 +269,29 @@ body {
 
 /* ── Chips ──────────────────────────────────────────────────── */
 
-.chips-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.chips-row        { display: flex; flex-direction: column; gap: 8px; }
+.bidder-cells-row { display: flex; gap: 8px; }
+.chips-extras     { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.bidder-cell {
+  background: var(--n200);
+  border-top: 1px solid #44a200;
+  border-radius: var(--r);
+  padding: 8px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 64px;
+  min-height: 64px;
+  flex: 1;
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background 0.1s;
+}
+.bidder-cell:active { background: #3a4250; }
+.bidder-cell-label  { font-size: 11px; font-weight: 500; color: var(--n600); text-transform: uppercase; letter-spacing: 0.8px; line-height: 1.4; }
+.bidder-cell-name   { font-size: 20px; font-weight: 500; color: var(--n800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
 .chip {
   background: var(--n200);
   border: none;
@@ -1050,39 +1072,42 @@ function chkSvg() {
 
 function renderChips() {
   const s = S();
-  let html = s.buyer
-    ? `<button class="chip buyer" onclick="openBidderSheet('buyer')">
-        <span class="chip-label">${s.buyer}</span>
-        <span class="chip-x" onclick="event.stopPropagation();S().buyer=null;renderChips()">×</span>
-       </button>`
-    : `<button class="chip" onclick="openBidderSheet('buyer')">
-        <span class="chip-icon">${plusSvg()}</span>
-        <span class="chip-label">Buyer</span>
-       </button>`;
-  s.underbidders.forEach(name => {
-    const safe = name.replace(/'/g, "\\'");
-    html += `<button class="chip filled" onclick="openBidderSheet('underbidder')">
-      <span class="chip-label">${name}</span>
-      <span class="chip-x" onclick="event.stopPropagation();removeUB('${safe}')">×</span>
-    </button>`;
-  });
-  html += `<button class="chip" onclick="openBidderSheet('underbidder')">
-    <span class="chip-icon">${plusSvg()}</span>
-    <span class="chip-label">Underbidder</span>
-  </button>`;
-  const ns = S().notSold;
-  html += ns
+  const buyerSet = !!s.buyer;
+  const ubSet    = s.underbidders.length > 0;
+  const ubFirst  = s.underbidders[0] || null;
+  const ubExtra  = s.underbidders.length > 1 ? ` · +${s.underbidders.length - 1}` : '';
+  const ns = s.notSold;
+  const nsChip = ns
     ? `<button class="chip not-sold" onclick="S().notSold=false;renderChips()">
-        <span class="chip-icon">${noSvg()}</span>
-        <span class="chip-label">Not sold</span>
+        <span class="chip-icon">${noSvg()}</span><span class="chip-label">Not sold</span>
        </button>`
     : `<button class="chip" onclick="S().notSold=true;renderChips()">
-        <span class="chip-icon">${plusSvg()}</span>
-        <span class="chip-label">Not sold</span>
+        <span class="chip-icon">${plusSvg()}</span><span class="chip-label">Not sold</span>
        </button>`;
+  let html = '';
+  if (!buyerSet && !ubSet) {
+    html = `<div class="chips-extras">
+      <button class="chip" onclick="openBidderSheet('buyer')"><span class="chip-icon">${plusSvg()}</span><span class="chip-label">Buyer</span></button>
+      <button class="chip" onclick="openBidderSheet('underbidder')"><span class="chip-icon">${plusSvg()}</span><span class="chip-label">Underbidder</span></button>
+      ${nsChip}
+    </div>`;
+  } else {
+    const buyerEl = buyerSet
+      ? `<div class="bidder-cell" onclick="openBidderSheet('buyer')">
+          <div class="bidder-cell-label">Buyer</div>
+          <div class="bidder-cell-name">${s.buyer}</div>
+         </div>`
+      : `<button class="chip" onclick="openBidderSheet('buyer')"><span class="chip-icon">${plusSvg()}</span><span class="chip-label">Buyer</span></button>`;
+    const ubEl = ubSet
+      ? `<div class="bidder-cell" onclick="openBidderSheet('underbidder')">
+          <div class="bidder-cell-label">Underbidder${ubExtra}</div>
+          <div class="bidder-cell-name">${ubFirst}</div>
+         </div>`
+      : `<button class="chip" onclick="openBidderSheet('underbidder')"><span class="chip-icon">${plusSvg()}</span><span class="chip-label">Underbidder</span></button>`;
+    html = `<div class="bidder-cells-row">${buyerEl}${ubEl}</div>
+            <div class="chips-extras">${nsChip}</div>`;
+  }
   document.getElementById('chipsRow').innerHTML = html;
-  setTimeout(() => document.getElementById('notesField')
-    .scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
 }
 
 function removeUB(name) { S().underbidders = S().underbidders.filter(n=>n!==name); renderChips(); }
