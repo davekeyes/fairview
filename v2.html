@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#11151b">
 <title>Fairview — Auction v2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +29,7 @@
   --r-pill:999px;
 }
 
-html { background: var(--n50); overscroll-behavior: none; }
+html { background: #11151b; background: var(--n50); overscroll-behavior: none; }
 
 body {
   font-family: var(--font);
@@ -62,7 +63,7 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 88px);
+  padding: 12px 16px 0;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -314,17 +315,11 @@ body {
 
 /* ── Nav ────────────────────────────────────────────────────── */
 
-.nav-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
+.action-row {
   display: flex;
-  gap: 12px;
-  padding: 10px 16px;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
-  background: linear-gradient(to bottom, transparent 0%, var(--n50) 35%);
-  pointer-events: none;
+  gap: 8px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
 }
-.nav-bar button { pointer-events: all; }
 
 /* Icon-only prev button */
 .btn-prev-icon {
@@ -526,32 +521,32 @@ body {
         </div>
 
         <!-- Notes -->
+        <!-- Buyer / underbidder chips -->
+        <div class="chips-row" id="chipsRow"></div>
+
         <div class="notes-cell">
           <div class="cell-label">Notes</div>
           <textarea class="notes-ta" id="notesField" rows="2" placeholder="Add a note…"></textarea>
         </div>
 
-        <!-- Buyer / underbidder chips -->
-        <div class="chips-row" id="chipsRow"></div>
-
       </div>
+
+      <div class="action-row">
+        <button class="btn-prev-icon" id="btnPrev" onclick="navigate(-1)" aria-label="Previous lot">
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none" aria-hidden="true">
+            <path d="M8.5 1.5L1.5 8l7 6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="btn-next" id="btnNext" onclick="navigate(1)">
+          <div class="btn-next-inner">
+            <div class="btn-next-label" id="btnNextLabel">Next lot</div>
+            <div class="btn-next-desc"  id="btnNextSub"></div>
+          </div>
+          <span class="btn-next-arrow">›</span>
+        </button>
+      </div>
+
     </div>
-  </div>
-
-  <!-- Nav -->
-  <div class="nav-bar">
-    <button class="btn-prev-icon" id="btnPrev" onclick="navigate(-1)" aria-label="Previous lot">
-      <svg width="10" height="16" viewBox="0 0 10 16" fill="none" aria-hidden="true">
-        <path d="M8.5 1.5L1.5 8l7 6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-    <button class="btn-next" id="btnNext" onclick="navigate(1)">
-      <div class="btn-next-inner">
-        <div class="btn-next-label" id="btnNextLabel">Next lot</div>
-        <div class="btn-next-desc"  id="btnNextSub"></div>
-      </div>
-      <span class="btn-next-arrow">›</span>
-    </button>
   </div>
 </div>
 
@@ -850,7 +845,12 @@ function renderCell(id, from, to, unit, rightAlign) {
   }
   // Inline first; stack if overflow
   el.innerHTML = `<span class="cell-value">${from}</span><span class="range-word">to</span><span class="cell-value">${to}</span>${u}`;
-  if (el.scrollWidth > el.clientWidth + 2) {
+  const elR = el.getBoundingClientRect().right;
+  let overflows = false;
+  for (const child of el.children) {
+    if (child.getBoundingClientRect().right > elR + 2) { overflows = true; break; }
+  }
+  if (overflows) {
     el.classList.add('stacked');
     el.innerHTML = `<div class="range-primary"><span class="cell-value">${from}</span>${u}</div>
       <div class="range-secondary"><span class="range-dash">–</span><span class="cell-value-sm">${to}</span></div>`;

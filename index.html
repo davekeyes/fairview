@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#11151b">
 <title>Fairview — Auction</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,6 +30,7 @@
 }
 
 html {
+  background: #11151b; /* explicit hex so safe-area colour matches before CSS vars load */
   background: var(--n50);
   overscroll-behavior: none;
 }
@@ -81,8 +83,7 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  /* Bottom padding accounts for nav bar + safe area + browser chrome */
-  padding: 4px 16px calc(env(safe-area-inset-bottom, 0px) + 88px);
+  padding: 4px 16px 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -113,9 +114,45 @@ body {
   gap: 12px;
 }
 
-.lot-info { padding: 8px 8px 4px; }
+/* ── Card header (lot number + edit) ─────────────────────── */
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px 0;
+  position: relative;
+}
+.lot-number { font-size: 20px; font-weight: 600; color: var(--n800); letter-spacing: 0.1px; }
+.edit-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--n500);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.lot-info { padding: 4px 8px; }
 .lot-vendor { font-size: 20px; font-weight: 600; color: var(--n800); letter-spacing: 0.1px; margin-bottom: 4px; }
 .lot-meta   { font-size: 16px; font-weight: 500; color: var(--n700); letter-spacing: 0.1px; }
+
+/* ── Action row (prev + next, in content flow) ───────────── */
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+}
 
 /* ── Data cells ──────────────────────────────────────────── */
 
@@ -225,8 +262,8 @@ body {
   pointer-events: none;
   z-index: 2;
 }
-.picker::before { top: 0;    background: linear-gradient(to bottom, var(--n100), transparent); }
-.picker::after  { bottom: 0; background: linear-gradient(to top,   var(--n100), transparent); }
+.picker::before { top: 0;    background: none; }
+.picker::after  { bottom: 0; background: none; }
 
 .picker-rail {
   position: absolute;
@@ -269,8 +306,7 @@ body {
 .picker-side-left {
   position: absolute;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;          /* aligned to top of picker section */
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -421,19 +457,7 @@ body {
 }
 .notes-ta::placeholder { color: var(--n400); font-style: italic; }
 
-/* ── Fixed bottom nav ────────────────────────────────────── */
-
-.nav-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  display: flex;
-  gap: 12px;
-  padding: 10px 16px;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
-  background: linear-gradient(to bottom, transparent 0%, var(--n50) 35%);
-  pointer-events: none;
-}
-.nav-bar button { pointer-events: all; }
+/* (nav-bar removed — buttons live in .action-row inside content) */
 
 .btn-prev {
   background: var(--n100);
@@ -695,8 +719,14 @@ body {
 
   <div class="scroll-wrap">
     <div class="content" id="content">
-      <div class="lot-number" id="lotNumber">Lot 81</div>
       <div class="lot-card">
+
+        <div class="card-header">
+          <div class="lot-number" id="lotNumber">Lot 81</div>
+          <button class="edit-btn" aria-label="Edit lot">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11 2l3 3-8.5 8.5H2v-3L11 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
 
         <div class="lot-info">
           <div class="lot-vendor" id="lotVendor"></div>
@@ -734,29 +764,30 @@ body {
           <div class="picker-side-right" id="pickerSideRight"></div>
         </div>
 
-        <div class="chips-row" id="chipsRow"></div>
-
         <div class="notes-cell">
           <div class="cell-label">Notes</div>
           <textarea class="notes-ta" id="notesField" rows="2" placeholder="Add a note…"></textarea>
         </div>
 
-      </div>
-    </div>
-  </div>
+        <div class="chips-row" id="chipsRow"></div>
 
-  <div class="nav-bar">
-    <button class="btn-prev" id="btnPrev" onclick="navigate(-1)">
-      <span class="btn-main">Previous</span>
-      <span class="btn-sub" id="btnPrevSub"></span>
-    </button>
-    <button class="btn-next" id="btnNext" onclick="navigate(1)">
-      <div class="btn-next-inner">
-        <div class="btn-next-label" id="btnNextLabel">Next lot</div>
-        <div class="btn-next-desc"  id="btnNextSub"></div>
       </div>
-      <span class="btn-next-arrow">›</span>
-    </button>
+
+      <div class="action-row">
+        <button class="btn-prev" id="btnPrev" onclick="navigate(-1)">
+          <span class="btn-main">Previous</span>
+          <span class="btn-sub" id="btnPrevSub"></span>
+        </button>
+        <button class="btn-next" id="btnNext" onclick="navigate(1)">
+          <div class="btn-next-inner">
+            <div class="btn-next-label" id="btnNextLabel">Next lot</div>
+            <div class="btn-next-desc"  id="btnNextSub"></div>
+          </div>
+          <span class="btn-next-arrow">›</span>
+        </button>
+      </div>
+
+    </div>
   </div>
 
 </div>
@@ -1052,8 +1083,13 @@ function renderCell(id, from, to, unit, rightAlign) {
   // Try inline first — "255 to 270 kg"
   el.innerHTML = `<span class="cell-value">${from}</span><span class="range-word">to</span><span class="cell-value">${to}</span>${u}`;
 
-  // If inline overflows, switch to stacked
-  if (el.scrollWidth > el.clientWidth + 2) {
+  // Use getBoundingClientRect for reliable overflow detection across all browsers
+  const elR = el.getBoundingClientRect().right;
+  let overflows = false;
+  for (const child of el.children) {
+    if (child.getBoundingClientRect().right > elR + 2) { overflows = true; break; }
+  }
+  if (overflows) {
     el.classList.add('stacked');
     el.innerHTML = `
       <div class="range-primary"><span class="cell-value">${from}</span>${u}</div>
