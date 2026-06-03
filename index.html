@@ -151,6 +151,8 @@ body {
 .action-row {
   display: flex;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
 }
 
@@ -487,6 +489,7 @@ body {
   color: var(--n800);
   cursor: pointer;
   flex: 1;
+  min-width: 0; /* prevent flex child from overflowing */
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   transition: background 0.1s;
@@ -1080,21 +1083,11 @@ function renderCell(id, from, to, unit, rightAlign) {
     return;
   }
 
-  // Try inline first — "255 to 270 kg"
-  el.innerHTML = `<span class="cell-value">${from}</span><span class="range-word">to</span><span class="cell-value">${to}</span>${u}`;
-
-  // Use getBoundingClientRect for reliable overflow detection across all browsers
-  const elR = el.getBoundingClientRect().right;
-  let overflows = false;
-  for (const child of el.children) {
-    if (child.getBoundingClientRect().right > elR + 2) { overflows = true; break; }
-  }
-  if (overflows) {
-    el.classList.add('stacked');
-    el.innerHTML = `
-      <div class="range-primary"><span class="cell-value">${from}</span>${u}</div>
-      <div class="range-secondary"><span class="range-dash">–</span><span class="cell-value-sm">${to}</span></div>`;
-  }
+  // Always stacked for ranges — cells are too narrow at 24px for decimal range values
+  el.classList.add('stacked');
+  el.innerHTML = `
+    <div class="range-primary"><span class="cell-value">${from}</span>${u}</div>
+    <div class="range-secondary"><span class="range-dash">–</span><span class="cell-value-sm">${to}</span></div>`;
 }
 
 function computeHead() {
