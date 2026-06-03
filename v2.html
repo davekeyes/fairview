@@ -830,6 +830,9 @@ document.getElementById('priceHeadCell').addEventListener('pointerup',   priceCe
 
 // ─── Cell rendering ────────────────────────────────────────────────────────────
 
+let fontsReady = false;
+document.fonts.ready.then(() => { fontsReady = true; updateCells(); });
+
 function renderCell(id, from, to, unit, rightAlign) {
   const el = document.getElementById(id);
   el.classList.toggle('right', !!rightAlign);
@@ -845,9 +848,28 @@ function renderCell(id, from, to, unit, rightAlign) {
     el.innerHTML = `<span class="cell-value">${from}</span>${u}`;
     return;
   }
-  el.classList.add('stacked');
-  el.innerHTML = `<div class="range-primary"><span class="cell-value">${from}</span>${u}</div>
+
+  const stackedHTML = `<div class="range-primary"><span class="cell-value">${from}</span>${u}</div>
     <div class="range-secondary"><span class="range-dash">–</span><span class="cell-value-sm">${to}</span></div>`;
+
+  if (!fontsReady) {
+    el.classList.add('stacked');
+    el.innerHTML = stackedHTML;
+    return;
+  }
+
+  // Font loaded — try inline
+  el.innerHTML = `<span class="cell-value">${from}</span><span class="range-word">to</span><span class="cell-value">${to}</span>${u}`;
+
+  const elR = el.getBoundingClientRect().right;
+  let overflows = false;
+  for (const child of el.children) {
+    if (child.getBoundingClientRect().right > elR + 2) { overflows = true; break; }
+  }
+  if (overflows) {
+    el.classList.add('stacked');
+    el.innerHTML = stackedHTML;
+  }
 }
 
 function computeHead() {

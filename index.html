@@ -1067,6 +1067,10 @@ pickerEl.addEventListener('pointerup', e => {
 
 // ─── Cell rendering ───────────────────────────────────────────────────────────
 
+// Font-load guard: measurement is only accurate once the real font is in use
+let fontsReady = false;
+document.fonts.ready.then(() => { fontsReady = true; updateCells(); });
+
 function renderCell(id, from, to, unit, rightAlign) {
   const el = document.getElementById(id);
   el.classList.toggle('right', !!rightAlign);
@@ -1085,11 +1089,31 @@ function renderCell(id, from, to, unit, rightAlign) {
     return;
   }
 
-  // Always stacked for ranges — cells are too narrow at 24px for decimal range values
-  el.classList.add('stacked');
-  el.innerHTML = `
+  const stackedHTML = `
     <div class="range-primary"><span class="cell-value">${from}</span>${u}</div>
     <div class="range-secondary"><span class="range-dash">–</span><span class="cell-value-sm">${to}</span></div>`;
+
+  if (!fontsReady) {
+    // Real font not loaded yet — start stacked; will upgrade to inline after load
+    el.classList.add('stacked');
+    el.innerHTML = stackedHTML;
+    return;
+  }
+
+  // Font loaded — try inline ("255 to 270 kg")
+  el.innerHTML = `<span class="cell-value">${from}</span><span class="range-word">to</span><span class="cell-value">${to}</span>${u}`;
+
+  // Check actual overflow with the real font rendered
+  const elR = el.getBoundingClientRect().right;
+  let overflows = false;
+  for (const child of el.children) {
+    if (child.getBoundingClientRect().right > elR + 2) { overflows = true; break; }
+  }
+
+  if (overflows) {
+    el.classList.add('stacked');
+    el.innerHTML = stackedHTML;
+  }
 }
 
 function computeHead() {
