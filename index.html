@@ -188,7 +188,7 @@ body {
 }
 .picker-btn {
   width: 52px;
-  height: 148px;
+  height: 200px;
   background: none;
   border: none;
   cursor: pointer;
@@ -210,7 +210,7 @@ body {
 
 .picker {
   flex: 1;
-  height: 148px;
+  height: 200px;
   overflow: hidden;
   position: relative;
   cursor: ns-resize;
@@ -221,7 +221,7 @@ body {
   content: '';
   position: absolute;
   left: 0; right: 0;
-  height: 40px;
+  height: 50px;
   pointer-events: none;
   z-index: 2;
 }
@@ -303,6 +303,62 @@ body {
 .chip-label  { font-size: 14px; font-weight: 500; color: var(--n700); line-height: 20px; white-space: nowrap; }
 .chip.buyer .chip-label { color: #fb923c; }
 .chip-x      { font-size: 18px; line-height: 1; color: var(--n500); margin-left: 1px; display: flex; align-items: center; }
+
+/* ── Increment selector ──────────────────────────────────── */
+
+.inc-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: -4px;
+}
+.inc-btn {
+  background: var(--n200);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 5px 13px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--n500);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background 0.1s, color 0.1s;
+  letter-spacing: 0.2px;
+}
+.inc-btn.active { background: rgba(249,115,22,0.14); color: var(--sell); }
+.inc-btn:active { opacity: 0.7; }
+
+/* ── Narrow cell (tally) ─────────────────────────────────── */
+
+.cell-narrow { flex: 0 0 110px !important; }
+
+/* ── New client inline form ──────────────────────────────── */
+
+.new-client-wrap { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.new-client-toggle {
+  background: none;
+  border: 1px dashed var(--n300);
+  border-radius: var(--r);
+  padding: 11px 14px;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--n500);
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: border-color 0.1s, color 0.1s;
+}
+.new-client-toggle:active { color: var(--n700); border-color: var(--n500); }
+.new-client-form {
+  display: none;
+  gap: 8px;
+  flex-direction: column;
+}
+.new-client-form.open { display: flex; }
 
 /* ── Notes ───────────────────────────────────────────────── */
 
@@ -576,7 +632,7 @@ body {
         </div>
 
         <div class="cell-row">
-          <div class="cell" onclick="openNumpad('tally')">
+          <div class="cell cell-narrow" onclick="openNumpad('tally')">
             <div class="cell-label">Tally</div>
             <div class="cell-body" id="tallyBody"></div>
           </div>
@@ -610,6 +666,8 @@ body {
           <button class="picker-btn" id="btnPlus">+</button>
         </div>
 
+        <div class="inc-row" id="incRow"></div>
+
         <div class="chips-row" id="chipsRow"></div>
 
         <div class="notes-cell">
@@ -635,6 +693,13 @@ body {
   <div class="sheet-title" id="bidderTitle">Select buyer</div>
   <input class="sheet-search" id="bidderSearch" type="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search bidders…" oninput="filterBidders()">
   <div class="bidder-list" id="bidderList"></div>
+  <div class="new-client-wrap">
+    <button class="new-client-toggle" id="newClientToggle" onclick="toggleNewClient()">+ Add new person</button>
+    <div class="new-client-form" id="newClientForm">
+      <input class="sheet-search" type="text" id="newClientName" autocomplete="off" autocorrect="off" placeholder="Full name…">
+      <button class="sheet-done" onclick="addNewClient()">Add &amp; select</button>
+    </div>
+  </div>
   <button class="sheet-done" id="bidderDone" onclick="closeBidderSheet()">Done</button>
 </div>
 
@@ -702,12 +767,40 @@ const S = () => states[lotIdx];
 
 // ─── Picker ───────────────────────────────────────────────────────────────────
 
-const STEP = 0.02, START = 0.50, TOTAL = 350, ITEM_H = 37, PCTR = 74;
+const STEP = 0.02, START = 0.50, TOTAL = 350, ITEM_H = 37, PCTR = 100;
 
 function getPrice(i) { return START + i * STEP; }
 function fmtP(n)     { return n.toFixed(2); }
 
 let pickerMode = 'kg'; // 'kg' | 'head'
+
+// Increment options
+const KG_OPTS   = [{label:'2¢', val:0.02}, {label:'10¢', val:0.10}];
+const HEAD_OPTS = [{label:'$10', val:10}, {label:'$100', val:100},
+                   {label:'$500', val:500}, {label:'$1k', val:1000}];
+let kgInc   = 0.02;  // $/kg
+let headInc = 100;   // $/head
+
+function currentSteps() {
+  if (pickerMode === 'head') {
+    const w = S().weight.from || 300;
+    return Math.max(1, Math.round(headInc / (w * STEP)));
+  }
+  return Math.max(1, Math.round(kgInc / STEP));
+}
+
+function setKgInc(val)   { kgInc   = val; renderIncRow(); }
+function setHeadInc(val) { headInc = val; renderIncRow(); }
+
+function renderIncRow() {
+  const isHead = pickerMode === 'head';
+  const opts = isHead ? HEAD_OPTS : KG_OPTS;
+  const cur  = isHead ? headInc  : kgInc;
+  document.getElementById('incRow').innerHTML = opts.map(o =>
+    `<button class="inc-btn${o.val === cur ? ' active' : ''}"
+             onclick="${isHead ? 'setHeadInc' : 'setKgInc'}(${o.val})">${o.label}</button>`
+  ).join('');
+}
 
 function getPickerLabel(i) {
   if (pickerMode === 'head') {
@@ -728,6 +821,7 @@ function togglePickerMode() {
   btn.textContent = pickerMode === 'kg' ? '$/kg' : '$/head';
   btn.classList.toggle('head', pickerMode === 'head');
   refreshPickerLabels();
+  renderIncRow();
 }
 
 function buildPicker() {
@@ -744,7 +838,7 @@ function applyPickerPos(animate, easing, dur) {
   const track = document.getElementById('pickerTrack');
   const offset = PCTR - S().priceIdx * ITEM_H - ITEM_H / 2;
   track.style.transition = animate
-    ? `transform ${dur || 240}ms ${easing || 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'}`
+    ? `transform ${dur || 120}ms ${easing || 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'}`
     : 'none';
   track.style.transform = `translateY(${offset}px)`;
 }
@@ -770,10 +864,8 @@ function styleItems() {
 }
 
 function movePicker(delta) {
-  S().priceIdx = Math.max(0, Math.min(TOTAL - 1, S().priceIdx + delta));
-  // Clean ease-out, no overshoot — track slides in the correct direction;
-  // rapid taps always continue forward because current position never exceeds target
-  applyPickerPos(true, 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', 160);
+  S().priceIdx = Math.max(0, Math.min(TOTAL - 1, S().priceIdx + delta * currentSteps()));
+  applyPickerPos(true);
   styleItems();
   updateCells();
 }
@@ -966,6 +1058,7 @@ function npSet() {
     s.weight.from = pF(npFrom); s.weight.to = pF(npTo);
     s.headManual = { from: null, to: null };
     refreshPickerLabels();
+    renderIncRow();
 
   } else if (npMode === 'pricekg') {
     const hi = priceStrToIdx(npTo), lo = priceStrToIdx(npFrom);
@@ -1011,6 +1104,9 @@ function openBidderSheet(mode) {
   document.getElementById('bidderTitle').textContent  = isUB ? 'Select underbidders' : 'Select buyer';
   document.getElementById('bidderDone').style.display = isUB ? 'block' : 'none';
   document.getElementById('bidderSearch').value = '';
+  document.getElementById('newClientName').value = '';
+  document.getElementById('newClientForm').classList.remove('open');
+  document.getElementById('newClientToggle').style.display = 'block';
   filterBidders();
   openSheet('bidder');
   setTimeout(() => document.getElementById('bidderSearch').focus(), 320);
@@ -1114,6 +1210,7 @@ function loadLot() {
   applyPickerPos(false);
   styleItems();
   refreshPickerLabels();
+  renderIncRow();
   updateCells();
   renderChips();
 }
@@ -1131,6 +1228,28 @@ function navigate(dir) {
     c.classList.add(inCls);
     c.addEventListener('animationend', () => c.classList.remove(inCls), { once: true });
   }, { once: true });
+}
+
+// ─── New client ───────────────────────────────────────────────────────────────
+
+function toggleNewClient() {
+  const form   = document.getElementById('newClientForm');
+  const toggle = document.getElementById('newClientToggle');
+  const open   = form.classList.toggle('open');
+  toggle.style.display = open ? 'none' : 'block';
+  if (open) setTimeout(() => document.getElementById('newClientName').focus(), 80);
+}
+
+function addNewClient() {
+  const input = document.getElementById('newClientName');
+  const name  = input.value.trim();
+  if (!name) return;
+  if (!BIDDERS.includes(name)) { BIDDERS.push(name); BIDDERS.sort(); }
+  input.value = '';
+  // Reset form
+  document.getElementById('newClientForm').classList.remove('open');
+  document.getElementById('newClientToggle').style.display = 'block';
+  selectBidder(name);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
