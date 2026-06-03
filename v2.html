@@ -350,7 +350,7 @@ body {
   border-top: 1px solid var(--n400);
   border-left: none; border-right: none; border-bottom: none;
   border-radius: var(--r-pill);
-  padding: 7px 40px 11px 12px;
+  padding: 7px 40px 7px 12px;
   font-family: var(--font);
   color: var(--n800);
   cursor: pointer;
@@ -368,7 +368,7 @@ body {
 .btn-next:disabled { opacity: 0.3; pointer-events: none; }
 .btn-next-inner { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: center; }
 .btn-next-label { font-size: 14px; font-weight: 500; color: var(--n600); letter-spacing: 0.6px; text-transform: uppercase; line-height: 20px; }
-.btn-next-desc  { font-size: 16px; font-weight: 500; color: var(--n700); line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.btn-next-desc  { font-size: 16px; font-weight: 500; color: var(--n700); line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .btn-next-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--n600); display: flex; align-items: center; }
 
 /* ── Backdrop ───────────────────────────────────────────────── */
@@ -833,6 +833,19 @@ document.getElementById('priceHeadCell').addEventListener('pointerup',   priceCe
 let fontsReady = false;
 document.fonts.ready.then(() => { fontsReady = true; updateCells(); });
 
+let _ruler = null;
+function rulerWidth(from, to, unit) {
+  if (!_ruler) {
+    _ruler = document.createElement('div');
+    _ruler.style.cssText = 'position:absolute;top:-9999px;left:-9999px;visibility:hidden;white-space:nowrap;display:flex;align-items:baseline;gap:3px;';
+    document.body.appendChild(_ruler);
+  }
+  const u = unit ? `<span style="font-size:14px;font-style:italic;font-family:inherit;font-weight:400">${unit}</span>` : '';
+  _ruler.style.fontFamily = "'IBM Plex Sans', sans-serif";
+  _ruler.innerHTML = `<span style="font-size:24px;font-weight:500">${from}</span><span style="font-size:13px;font-style:italic;font-weight:400">to</span><span style="font-size:24px;font-weight:500">${to}</span>${u}`;
+  return _ruler.offsetWidth;
+}
+
 function renderCell(id, from, to, unit, rightAlign) {
   const el = document.getElementById(id);
   el.classList.toggle('right', !!rightAlign);
@@ -858,17 +871,14 @@ function renderCell(id, from, to, unit, rightAlign) {
     return;
   }
 
-  // Font loaded — try inline
-  el.innerHTML = `<span class="cell-value">${from}</span><span class="range-word">to</span><span class="cell-value">${to}</span>${u}`;
+  const needed = rulerWidth(from, to, unit);
+  const available = el.offsetWidth;
 
-  const elR = el.getBoundingClientRect().right;
-  let overflows = false;
-  for (const child of el.children) {
-    if (child.getBoundingClientRect().right > elR + 2) { overflows = true; break; }
-  }
-  if (overflows) {
+  if (needed > available) {
     el.classList.add('stacked');
     el.innerHTML = stackedHTML;
+  } else {
+    el.innerHTML = `<span class="cell-value">${from}</span><span class="range-word">to</span><span class="cell-value">${to}</span>${u}`;
   }
 }
 
