@@ -358,7 +358,6 @@ body {
 /* Filled buyer/underbidder cell — full width, 64px tall */
 .bidder-cell {
   background: var(--n200);
-  border-top: 1px solid #44a200;
   border-radius: var(--r);
   padding: 8px 12px 12px;
   display: flex;
@@ -371,7 +370,9 @@ body {
   touch-action: manipulation;
   transition: background 0.1s;
 }
-.bidder-cell:active { background: #3a4250; }
+.bidder-cell:active         { background: #3a4250; }
+.bidder-cell.buyer          { border-top: 1px solid #44a200; } /* transaction/buy green */
+.bidder-cell.underbidder    { border-top: 1px solid var(--n400); } /* muted, different from buyer */
 .bidder-cell-label  {
   font-size: 11px; font-weight: 500; color: var(--n600);
   text-transform: uppercase; letter-spacing: 0.8px; line-height: 1.4;
@@ -1388,21 +1389,27 @@ function renderChips() {
     </div>`;
 
   } else {
-    // --- Buyer row ---
+    // --- Buyer cell ---
     html += buyerSet
-      ? `<div class="bidder-cell" onclick="openBidderSheet('buyer')">
+      ? `<div class="bidder-cell buyer" onclick="openBidderSheet('buyer')">
            <div class="bidder-cell-label">Buyer</div>
            <div class="bidder-cell-name">${s.buyer}</div>
          </div>`
       : '';
 
-    // --- Underbidder rows (one per person, full width) ---
-    s.underbidders.forEach(name => {
-      html += `<div class="bidder-cell" onclick="openBidderSheet('underbidder')">
-        <div class="bidder-cell-label">Underbidder</div>
-        <div class="bidder-cell-name">${name}</div>
+    // --- Underbidders: single grouped cell ---
+    if (ubSet) {
+      const ubLabel = s.underbidders.length > 1
+        ? `Underbidders · ${s.underbidders.length}`
+        : 'Underbidder';
+      const MAX = 2;
+      const names = s.underbidders.slice(0, MAX).join(' · ')
+        + (s.underbidders.length > MAX ? ` +${s.underbidders.length - MAX}` : '');
+      html += `<div class="bidder-cell underbidder" onclick="openBidderSheet('underbidder')">
+        <div class="bidder-cell-label">${ubLabel}</div>
+        <div class="bidder-cell-name">${names}</div>
       </div>`;
-    });
+    }
 
     // --- Action chips row ---
     // Always show + Buyer (if no buyer) and + Underbidder
