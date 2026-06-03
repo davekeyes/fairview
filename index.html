@@ -185,7 +185,8 @@ body {
 }
 .picker-btn {
   width: 52px;
-  height: 200px;
+  height: 68px;
+  align-self: center;
   background: none;
   border: none;
   cursor: pointer;
@@ -201,7 +202,7 @@ body {
   transition: color 0.1s, background 0.1s;
   user-select: none;
   flex-shrink: 0;
-  touch-action: manipulation; /* prevents double-tap zoom */
+  touch-action: manipulation;
 }
 .picker-btn:active { color: var(--n800); background: var(--n200); }
 
@@ -334,6 +335,25 @@ body {
 
 .cell-narrow { flex: 0 0 148px !important; }
 
+/* ── Stacked range display ───────────────────────────────── */
+
+.cell-body.is-range {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-height: auto;
+}
+.cell-body.right.is-range { align-items: flex-end; }
+.range-primary { display: flex; align-items: baseline; gap: 3px; }
+.range-secondary {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 1px;
+}
+.range-dash  { font-size: 12px; color: var(--n400); font-weight: 400; }
+.cell-value-sm { font-size: 17px; font-weight: 500; color: var(--n500); }
+
 /* ── New client inline form ──────────────────────────────── */
 
 .new-client-wrap { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
@@ -403,15 +423,16 @@ body {
   background: var(--n100);
   border: 1px solid var(--n200);
   border-radius: var(--r-pill);
-  padding: 15px 20px;
+  padding: 10px 20px;
   font-family: var(--font);
-  font-size: 17px;
-  font-weight: 500;
   color: var(--n800);
   cursor: pointer;
-  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 .btn-prev:active   { background: var(--n200); }
 .btn-prev:disabled { opacity: 0.3; pointer-events: none; }
@@ -420,18 +441,33 @@ body {
   background: var(--n700);
   border: 1px solid var(--n900);
   border-radius: var(--r-pill);
-  padding: 15px 12px;
+  padding: 10px 16px;
   font-family: var(--font);
-  font-size: 17px;
-  font-weight: 500;
   color: var(--n50);
   cursor: pointer;
   flex: 1;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  overflow: hidden;
 }
 .btn-next:active   { background: var(--n600); }
 .btn-next:disabled { opacity: 0.3; pointer-events: none; }
+
+.btn-main { font-size: 17px; font-weight: 500; line-height: 1.3; }
+.btn-sub  {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.3;
+}
 
 /* ── Backdrop ────────────────────────────────────────────── */
 
@@ -676,8 +712,14 @@ body {
   </div>
 
   <div class="nav-bar">
-    <button class="btn-prev" id="btnPrev" onclick="navigate(-1)">← Previous</button>
-    <button class="btn-next" id="btnNext" onclick="navigate(1)">Next lot →</button>
+    <button class="btn-prev" id="btnPrev" onclick="navigate(-1)">
+      <span class="btn-main">← Previous</span>
+      <span class="btn-sub" id="btnPrevSub"></span>
+    </button>
+    <button class="btn-next" id="btnNext" onclick="navigate(1)">
+      <span class="btn-main">Next lot →</span>
+      <span class="btn-sub" id="btnNextSub"></span>
+    </button>
   </div>
 
 </div>
@@ -936,17 +978,23 @@ pickerEl.addEventListener('pointerup', () => {
 function renderCell(id, from, to, unit, rightAlign) {
   const el = document.getElementById(id);
   el.classList.toggle('right', !!rightAlign);
-  el.classList.toggle('is-range', from !== null && to !== null);
+  const hasRange = from !== null && from !== undefined && to !== null && to !== undefined;
+  el.classList.toggle('is-range', hasRange);
+
   if (from === null || from === undefined) {
     el.innerHTML = `<span class="cell-value dim">—</span>${unit ? `<span class="cell-unit">${unit}</span>` : ''}`;
     return;
   }
-  let html = `<span class="cell-value">${from}</span>`;
-  if (to !== null && to !== undefined) {
-    html += `<span class="cell-sep">&thinsp;–&thinsp;</span><span class="cell-value">${to}</span>`;
+
+  if (!hasRange) {
+    el.innerHTML = `<span class="cell-value">${from}</span>${unit ? `<span class="cell-unit">${unit}</span>` : ''}`;
+  } else {
+    // Stacked range: primary value large on top, secondary smaller below
+    const u = unit ? `<span class="cell-unit">${unit}</span>` : '';
+    el.innerHTML = `
+      <div class="range-primary"><span class="cell-value">${from}</span>${u}</div>
+      <div class="range-secondary"><span class="range-dash">–</span><span class="cell-value-sm">${to}</span></div>`;
   }
-  if (unit) html += `<span class="cell-unit">${unit}</span>`;
-  el.innerHTML = html;
 }
 
 function computeHead() {
@@ -1221,6 +1269,10 @@ function loadLot() {
   document.getElementById('notesField').value      = s.notes;
   document.getElementById('btnPrev').disabled = lotIdx === 0;
   document.getElementById('btnNext').disabled = lotIdx === LOTS.length - 1;
+  const prev = lotIdx > 0 ? LOTS[lotIdx - 1] : null;
+  const next = lotIdx < LOTS.length - 1 ? LOTS[lotIdx + 1] : null;
+  document.getElementById('btnPrevSub').textContent = prev ? `Lot ${prev.num} · ${prev.vendor}` : '';
+  document.getElementById('btnNextSub').textContent = next ? `Lot ${next.num} · ${next.vendor}` : '';
   applyPickerPos(false);
   styleItems();
   refreshPickerLabels();
