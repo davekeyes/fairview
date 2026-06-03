@@ -653,8 +653,9 @@ function getItemH(d) { return d < ITEM_HEIGHTS.length ? ITEM_HEIGHTS[d] : 0; }
 const pickerOffsets = new Float32Array(TOTAL);
 function precomputeOffsets() {
   for (let idx = 0; idx < TOTAL; idx++) {
+    const pos = TOTAL - 1 - idx;
     let sum = 0;
-    for (let i = 0; i < idx; i++) sum += getItemH(Math.abs(i - idx));
+    for (let i = 0; i < pos; i++) sum += getItemH(Math.abs(i - pos));
     pickerOffsets[idx] = PCTR - ITEM_HEIGHTS[0] / 2 - sum;
   }
 }
@@ -678,7 +679,7 @@ function buildOverlay() {
   for (let i = 0; i < TOTAL; i++) {
     const el = document.createElement('div');
     el.className = 'po-item';
-    el.textContent = getOverlayLabel(i);
+    el.textContent = getOverlayLabel(TOTAL - 1 - i); // reversed: high prices at top
     track.appendChild(el);
   }
   precomputeOffsets();
@@ -686,7 +687,7 @@ function buildOverlay() {
 
 function refreshOverlayLabels() {
   const items = document.getElementById('poTrack').children;
-  for (let i = 0; i < items.length; i++) items[i].textContent = getOverlayLabel(i);
+  for (let i = 0; i < items.length; i++) items[i].textContent = getOverlayLabel(TOTAL - 1 - i);
 }
 
 function applyOverlayPos(animate) {
@@ -699,9 +700,9 @@ function applyOverlayPos(animate) {
 
 function styleOverlayItems() {
   const items = document.getElementById('poTrack').children;
-  const idx = S().priceIdx;
+  const centerPos = TOTAL - 1 - S().priceIdx;
   for (let i = 0; i < items.length; i++) {
-    const d = Math.abs(i - idx);
+    const d = Math.abs(i - centerPos);
     let h, fs, col, op;
     switch (d) {
       case 0: h=42; fs='34px'; col='#f2f4f6'; op=1;    break;
@@ -793,7 +794,7 @@ function priceCellMove(e) {
     ovPrevY = e.clientY; ovPrevT = now;
 
     const delta = ovStartY - e.clientY;
-    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(ovDragIdx + delta / DRAG_SENS)));
+    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(ovDragIdx - delta / DRAG_SENS)));
     applyOverlayPos(false);
     styleOverlayItems();
     updateCells();
@@ -811,7 +812,7 @@ function priceCellUp(e) {
     function coast() {
       v *= 0.82;
       if (Math.abs(v) < 0.03) return;
-      S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx + v * 1.4)));
+      S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx - v * 1.4)));
       updateCells();
       ovRafId = requestAnimationFrame(coast);
     }

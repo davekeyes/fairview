@@ -823,9 +823,11 @@ function getItemH(d) { return d < ITEM_HEIGHTS.length ? ITEM_HEIGHTS[d] : 0; }
 // Precomputed track offsets: offset[idx] = translateY that centres item idx
 const pickerOffsets = new Float32Array(TOTAL);
 function precomputeOffsets() {
+  // Array is built in reverse (high prices at top), so DOM position of priceIdx = TOTAL-1-idx
   for (let idx = 0; idx < TOTAL; idx++) {
+    const pos = TOTAL - 1 - idx;
     let sum = 0;
-    for (let i = 0; i < idx; i++) sum += getItemH(Math.abs(i - idx));
+    for (let i = 0; i < pos; i++) sum += getItemH(Math.abs(i - pos));
     pickerOffsets[idx] = PCTR - ITEM_HEIGHTS[0] / 2 - sum;
   }
 }
@@ -884,7 +886,7 @@ function getPickerLabel(i) {
 
 function refreshPickerLabels() {
   const items = document.getElementById('pickerTrack').children;
-  for (let i = 0; i < items.length; i++) items[i].textContent = getPickerLabel(i);
+  for (let i = 0; i < items.length; i++) items[i].textContent = getPickerLabel(TOTAL - 1 - i);
 }
 
 function togglePickerMode() {
@@ -898,7 +900,7 @@ function buildPicker() {
   for (let i = 0; i < TOTAL; i++) {
     const el = document.createElement('div');
     el.className = 'picker-item';
-    el.textContent = getPickerLabel(i);
+    el.textContent = getPickerLabel(TOTAL - 1 - i); // reversed: high prices at top
     track.appendChild(el);
   }
   precomputeOffsets();
@@ -914,9 +916,9 @@ function applyPickerPos(animate, easing, dur) {
 
 function styleItems() {
   const items = document.getElementById('pickerTrack').children;
-  const idx = S().priceIdx;
+  const centerPos = TOTAL - 1 - S().priceIdx; // DOM position in reversed array
   for (let i = 0; i < items.length; i++) {
-    const d = Math.abs(i - idx);
+    const d = Math.abs(i - centerPos);
     let h, fs, col, op;
     switch (d) {
       case 0: h=42; fs='34px'; col='#f2f4f6'; op=1;    break;
@@ -963,7 +965,7 @@ pickerEl.addEventListener('pointermove', e => {
   prevY = e.clientY; prevT = now;
   if (dragMoved) {
     const dy = dragY0 - e.clientY;
-    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(dragIdx0 + dy / DRAG_SENS)));
+    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(dragIdx0 - dy / DRAG_SENS)));
     applyPickerPos(false);
     styleItems();
     updateCells();
@@ -976,7 +978,7 @@ pickerEl.addEventListener('pointerup', e => {
     // Tap: above centre = step down, below centre = step up
     const rect = pickerEl.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    movePicker(y < PCTR ? -1 : 1);
+    movePicker(y < PCTR ? 1 : -1); // above = higher number = increase
     return;
   }
   let v = velY;
@@ -986,7 +988,7 @@ pickerEl.addEventListener('pointerup', e => {
       applyPickerPos(true, 'cubic-bezier(0.22, 1, 0.36, 1)', 160);
       return;
     }
-    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx + v * 1.4)));
+    S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx - v * 1.4)));
     applyPickerPos(false);
     styleItems();
     updateCells();
