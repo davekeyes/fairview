@@ -652,6 +652,12 @@ body {
 .bidder-name       { font-size: 17px; font-weight: 500; color: var(--n800); }
 .bidder-row.sel .bidder-name { color: #fb923c; }
 
+/* Underbidder sheet: green accent instead of orange */
+#bidderSheet.ub-mode .bidder-row.sel              { background: rgba(68,162,0,0.07); }
+#bidderSheet.ub-mode .bidder-row.sel .bidder-name { color: #5ec400; }
+#bidderSheet.ub-mode .bidder-row.sel .bidder-check{ background: #44a200; border-color: #44a200; }
+#bidderSheet.ub-mode .sheet-search                { caret-color: #44a200; }
+
 .bidder-check {
   width: 22px; height: 22px;
   border-radius: 50%;
@@ -1321,6 +1327,7 @@ let bidderMode = null, tempUBs = [];
 function openBidderSheet(mode) {
   bidderMode = mode;
   tempUBs = [...S().underbidders];
+  document.getElementById('bidderSheet').classList.toggle('ub-mode', mode === 'underbidder');
   const isUB = mode === 'underbidder';
   document.getElementById('bidderTitle').textContent  = isUB ? 'Select underbidders' : 'Select buyer';
   document.getElementById('bidderDone').style.display = isUB ? 'block' : 'none';
@@ -1353,7 +1360,11 @@ function filterBidders() {
 }
 
 function selectBidder(name) {
-  if (bidderMode === 'buyer') { S().buyer = name; closeBidderSheet(); }
+  if (bidderMode === 'buyer') {
+    // Toggle: tap current buyer to deselect, tap another to select
+    S().buyer = S().buyer === name ? null : name;
+    closeBidderSheet();
+  }
   else {
     const i = tempUBs.indexOf(name);
     i >= 0 ? tempUBs.splice(i,1) : tempUBs.push(name);
