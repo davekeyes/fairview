@@ -819,6 +819,7 @@ function priceCellMove(e) {
 
     const delta = ovStartY - e.clientY;
     S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(ovDragIdx - delta / DRAG_SENS)));
+    S().headManual = { from: null, to: null };
     applyOverlayPos(false);
     styleOverlayItems();
     updateCells();
@@ -837,6 +838,7 @@ function priceCellUp(e) {
       v *= 0.82;
       if (Math.abs(v) < 0.03) return;
       S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx - v * 1.4)));
+      S().headManual = { from: null, to: null };
       updateCells();
       ovRafId = requestAnimationFrame(coast);
     }

@@ -1041,6 +1041,7 @@ function styleItems() {
 
 function movePicker(delta) {
   S().priceIdx = Math.max(0, Math.min(TOTAL - 1, S().priceIdx + delta * currentSteps()));
+  S().headManual = { from: null, to: null }; // price/kg changed — recompute /head
   applyPickerPos(true);
   styleItems();
   updateCells();
@@ -1070,6 +1071,7 @@ pickerEl.addEventListener('pointermove', e => {
   if (dragMoved) {
     const dy = dragY0 - e.clientY;
     S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(dragIdx0 - dy / DRAG_SENS)));
+    S().headManual = { from: null, to: null };
     applyPickerPos(false);
     styleItems();
     updateCells();
@@ -1093,6 +1095,7 @@ pickerEl.addEventListener('pointerup', e => {
       return;
     }
     S().priceIdx = Math.max(0, Math.min(TOTAL - 1, Math.round(S().priceIdx - v * 1.4)));
+    S().headManual = { from: null, to: null };
     applyPickerPos(false);
     styleItems();
     updateCells();
