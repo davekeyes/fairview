@@ -853,8 +853,9 @@ document.getElementById('priceKgCell')  .addEventListener('pointerdown', e => pr
 document.getElementById('priceHeadCell').addEventListener('pointerdown', e => priceCellDown(e, 'head'));
 document.getElementById('priceKgCell')  .addEventListener('pointermove', priceCellMove);
 document.getElementById('priceHeadCell').addEventListener('pointermove', priceCellMove);
-document.getElementById('priceKgCell')  .addEventListener('pointerup',   priceCellUp);
-document.getElementById('priceHeadCell').addEventListener('pointerup',   priceCellUp);
+// pointerup on document so it fires even when setPointerCapture fails
+// (e.g. Chrome DevTools touch emulation). holdMode guards against false triggers.
+document.addEventListener('pointerup', e => { if (holdMode) priceCellUp(e); });
 
 // ─── Cell rendering ────────────────────────────────────────────────────────────
 
