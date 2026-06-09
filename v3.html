@@ -28,6 +28,7 @@
       --sell:  #f97316;
       --green: #44a200;
       --red:   #be3030;
+      --errorred: #ef4444;
       --r:     8px;
       --r-pill: 999px;
       font-family: 'IBM Plex Sans', system-ui, sans-serif;
@@ -144,7 +145,7 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    /* Lot card (gradient, orange top accent) */
+    /* Lot card (gradient, orange top accent; red when not sold) */
     .lot-info-card {
       background: linear-gradient(to bottom, var(--n100) 0%, #181d24 40%, var(--bg) 100%);
       border-top: 2px solid var(--sell);
@@ -152,6 +153,11 @@
       padding: 12px;
       display: flex; flex-direction: column; gap: 10px;
     }
+    .lot-info-card.ns { border-top-color: var(--errorred); }
+
+    /* Inline icons */
+    .ic { display: block; fill: currentColor; }
+    [data-ic] { display: inline-flex; align-items: center; justify-content: center; }
 
     .lot-info-head {
       padding: 4px 4px 0;
@@ -257,7 +263,7 @@
     .chips-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .chip {
       display: flex; align-items: center; gap: 4px;
-      padding: 8px 14px 8px 10px;
+      padding: 8px 16px 8px 12px;
       background: var(--n200); border-top: 1px solid var(--n300);
       border-radius: var(--r-pill);
       font-size: 14px; font-weight: 500; color: var(--n700);
@@ -265,11 +271,10 @@
       -webkit-user-select: none; user-select: none;
     }
     .chip:active { opacity: 0.7; }
-    .chip-plus { font-size: 15px; line-height: 1; }
-    /* Selected outcome chip — solid red pill, white text/icon (per Figma) */
+    /* Selected outcome chip — solid red pill, lighter red top border, white text/icon (per Figma) */
     .chip.outcome {
       background: var(--red);
-      border-top-color: var(--red); color: #fff;
+      border-top-color: var(--errorred); color: var(--n800);
     }
 
     /* ---- ACTION BAR ---- */
@@ -290,7 +295,6 @@
     }
     .btn-round:active { opacity: 0.6; }
     .btn-round.dim { opacity: 0.3; pointer-events: none; }
-    .btn-round.hash { font-size: 16px; font-weight: 600; }
 
     .btn-next {
       flex: 1; min-width: 0; height: 56px;
@@ -312,7 +316,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       line-height: 1.3;
     }
-    .btn-next-arrow { font-size: 20px; color: var(--n700); flex-shrink: 0; }
+    .btn-next-arrow { color: var(--n700); flex-shrink: 0; }
 
     /* ---- BACKDROP ---- */
     #backdrop {
@@ -615,9 +619,9 @@
 <!-- ═══ SCREEN: LOT DETAIL ═══ -->
 <div id="screen-detail" class="screen">
   <div class="detail-appbar">
-    <div class="detail-back" id="detail-back">&#8249; Auction</div>
+    <div class="detail-back" id="detail-back"><span data-ic="prev" data-ic-size="18"></span> Auction</div>
     <div class="detail-lot-label" id="detail-lot-label">Lot —</div>
-    <div class="detail-edit">&#x270F;&#xFE0E;</div>
+    <div class="detail-edit"><span data-ic="edit" data-ic-size="20"></span></div>
   </div>
 
   <div class="detail-body" id="detail-body">
@@ -674,14 +678,14 @@
   </div>
 
   <div class="action-bar">
-    <div class="btn-round" id="btn-prev" onclick="goPrev()">&#8249;</div>
-    <div class="btn-round hash" id="btn-hash" onclick="openJumpSheet()">#</div>
+    <div class="btn-round" id="btn-prev" onclick="goPrev()"><span data-ic="prev" data-ic-size="24"></span></div>
+    <div class="btn-round" id="btn-hash" onclick="openJumpSheet()"><span data-ic="hash" data-ic-size="24"></span></div>
     <div class="btn-next" id="btn-next" onclick="goNext()">
       <div class="btn-next-text">
         <div class="btn-next-lbl"  id="next-lbl">NEXT LOT —</div>
         <div class="btn-next-name" id="next-name">—</div>
       </div>
-      <div class="btn-next-arrow">&#8250;</div>
+      <div class="btn-next-arrow"><span data-ic="prev" data-ic-size="24" data-ic-rotate="180"></span></div>
     </div>
   </div>
 </div>
@@ -791,7 +795,7 @@
       <span class="jump-display-val" id="jump-val" style="display:none"></span>
       <span class="jump-display-ph"  id="jump-ph">Enter lot number</span>
     </div>
-    <div class="jump-confirm" onclick="commitJump()">&#10003;</div>
+    <div class="jump-confirm" onclick="commitJump()"><span data-ic="check" data-ic-size="16"></span></div>
   </div>
   <div class="jump-lots" id="jump-lots"></div>
   <div class="numpad">
@@ -815,6 +819,32 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════════
+// ICONS — paths exported from the Figma design file
+// ═══════════════════════════════════════════
+const ICONS = {
+  edit:  { vb: '0 0 24 24', d: 'M5 19H6.425L16.2 9.225L14.775 7.8L5 17.575V19ZM4 21C3.71667 21 3.47917 20.9042 3.2875 20.7125C3.09583 20.5208 3 20.2833 3 20V17.575C3 17.3083 3.05 17.0542 3.15 16.8125C3.25 16.5708 3.39167 16.3583 3.575 16.175L16.2 3.575C16.4 3.39167 16.6208 3.25 16.8625 3.15C17.1042 3.05 17.3583 3 17.625 3C17.8917 3 18.15 3.05 18.4 3.15C18.65 3.25 18.8667 3.4 19.05 3.6L20.425 5C20.625 5.18333 20.7708 5.4 20.8625 5.65C20.9542 5.9 21 6.15 21 6.4C21 6.66667 20.9542 6.92083 20.8625 7.1625C20.7708 7.40417 20.625 7.625 20.425 7.825L7.825 20.425C7.64167 20.6083 7.42917 20.75 7.1875 20.85C6.94583 20.95 6.69167 21 6.425 21H4ZM15.475 8.525L14.775 7.8L16.2 9.225L15.475 8.525Z' },
+  add:   { vb: '0 0 16 16', d: 'M7.525 13.8083C7.39722 13.6806 7.33333 13.5222 7.33333 13.3333V8.66667H2.66667C2.47778 8.66667 2.31944 8.60278 2.19167 8.475C2.06389 8.34722 2 8.18889 2 8C2 7.81111 2.06389 7.65278 2.19167 7.525C2.31944 7.39722 2.47778 7.33333 2.66667 7.33333H7.33333V2.66667C7.33333 2.47778 7.39722 2.31944 7.525 2.19167C7.65278 2.06389 7.81111 2 8 2C8.18889 2 8.34722 2.06389 8.475 2.19167C8.60278 2.31944 8.66667 2.47778 8.66667 2.66667V7.33333H13.3333C13.5222 7.33333 13.6806 7.39722 13.8083 7.525C13.9361 7.65278 14 7.81111 14 8C14 8.18889 13.9361 8.34722 13.8083 8.475C13.6806 8.60278 13.5222 8.66667 13.3333 8.66667H8.66667V13.3333C8.66667 13.5222 8.60278 13.6806 8.475 13.8083C8.34722 13.9361 8.18889 14 8 14C7.81111 14 7.65278 13.9361 7.525 13.8083Z' },
+  prev:  { vb: '0 0 24 24', d: 'M9.55 12L16.9 19.35C17.15 19.6 17.2708 19.8917 17.2625 20.225C17.2542 20.5583 17.125 20.85 16.875 21.1C16.625 21.35 16.3333 21.475 16 21.475C15.6667 21.475 15.375 21.35 15.125 21.1L7.425 13.425C7.225 13.225 7.075 13 6.975 12.75C6.875 12.5 6.825 12.25 6.825 12C6.825 11.75 6.875 11.5 6.975 11.25C7.075 11 7.225 10.775 7.425 10.575L15.125 2.875C15.375 2.625 15.6708 2.50417 16.0125 2.5125C16.3542 2.52083 16.65 2.65 16.9 2.9C17.15 3.15 17.275 3.44167 17.275 3.775C17.275 4.10833 17.15 4.4 16.9 4.65L9.55 12Z' },
+  hash:  { vb: '0 0 24 24', d: 'M9 16L8.175 19.275C8.125 19.4917 8.01667 19.6667 7.85 19.8C7.68333 19.9333 7.48333 20 7.25 20C6.93333 20 6.675 19.875 6.475 19.625C6.275 19.375 6.21667 19.1 6.3 18.8L7 16H4.275C3.94167 16 3.675 15.8708 3.475 15.6125C3.275 15.3542 3.21667 15.0667 3.3 14.75C3.35 14.5167 3.46667 14.3333 3.65 14.2C3.83333 14.0667 4.04167 14 4.275 14H7.5L8.5 10H5.775C5.44167 10 5.175 9.87083 4.975 9.6125C4.775 9.35417 4.71667 9.06667 4.8 8.75C4.85 8.51667 4.96667 8.33333 5.15 8.2C5.33333 8.06667 5.54167 8 5.775 8H9L9.825 4.725C9.875 4.50833 9.98333 4.33333 10.15 4.2C10.3167 4.06667 10.5167 4 10.75 4C11.0667 4 11.325 4.125 11.525 4.375C11.725 4.625 11.7833 4.9 11.7 5.2L11 8H15L15.825 4.725C15.875 4.50833 15.9833 4.33333 16.15 4.2C16.3167 4.06667 16.5167 4 16.75 4C17.0667 4 17.325 4.125 17.525 4.375C17.725 4.625 17.7833 4.9 17.7 5.2L17 8H19.725C20.0583 8 20.325 8.12917 20.525 8.3875C20.725 8.64583 20.7833 8.93333 20.7 9.25C20.65 9.48333 20.5333 9.66667 20.35 9.8C20.1667 9.93333 19.9583 10 19.725 10H16.5L15.5 14H18.225C18.5583 14 18.825 14.1292 19.025 14.3875C19.225 14.6458 19.2833 14.9333 19.2 15.25C19.15 15.4833 19.0333 15.6667 18.85 15.8C18.6667 15.9333 18.4583 16 18.225 16H15L14.175 19.275C14.125 19.4917 14.0167 19.6667 13.85 19.8C13.6833 19.9333 13.4833 20 13.25 20C12.9333 20 12.675 19.875 12.475 19.625C12.275 19.375 12.2167 19.1 12.3 18.8L13 16H9ZM9.5 14H13.5L14.5 10H10.5L9.5 14Z' },
+  block: { vb: '0 0 16 16', d: 'M5.4 14.1417C4.58889 13.7917 3.88333 13.3167 3.28333 12.7167C2.68333 12.1167 2.20833 11.4111 1.85833 10.6C1.50833 9.78889 1.33333 8.92222 1.33333 8C1.33333 7.07778 1.50833 6.21111 1.85833 5.4C2.20833 4.58889 2.68333 3.88333 3.28333 3.28333C3.88333 2.68333 4.58889 2.20833 5.4 1.85833C6.21111 1.50833 7.07778 1.33333 8 1.33333C8.92222 1.33333 9.78889 1.50833 10.6 1.85833C11.4111 2.20833 12.1167 2.68333 12.7167 3.28333C13.3167 3.88333 13.7917 4.58889 14.1417 5.4C14.4917 6.21111 14.6667 7.07778 14.6667 8C14.6667 8.92222 14.4917 9.78889 14.1417 10.6C13.7917 11.4111 13.3167 12.1167 12.7167 12.7167C12.1167 13.3167 11.4111 13.7917 10.6 14.1417C9.78889 14.4917 8.92222 14.6667 8 14.6667C7.07778 14.6667 6.21111 14.4917 5.4 14.1417ZM8 13.3333C8.6 13.3333 9.17778 13.2361 9.73333 13.0417C10.2889 12.8472 10.8 12.5667 11.2667 12.2L3.8 4.73333C3.43333 5.2 3.15278 5.71111 2.95833 6.26667C2.76389 6.82222 2.66667 7.4 2.66667 8C2.66667 9.48889 3.18333 10.75 4.21667 11.7833C5.25 12.8167 6.51111 13.3333 8 13.3333ZM12.2 11.2667C12.5667 10.8 12.8472 10.2889 13.0417 9.73333C13.2361 9.17778 13.3333 8.6 13.3333 8C13.3333 6.51111 12.8167 5.25 11.7833 4.21667C10.75 3.18333 9.48889 2.66667 8 2.66667C7.4 2.66667 6.82222 2.76389 6.26667 2.95833C5.71111 3.15278 5.2 3.43333 4.73333 3.8L12.2 11.2667Z' },
+  check: { vb: '0 0 15.463 11.225', d: 'M5.288 8.775L13.763 0.3C13.963 0.1 14.1963 0 14.463 0C14.7297 0 14.963 0.1 15.163 0.3C15.363 0.5 15.463 0.7375 15.463 1.0125C15.463 1.2875 15.363 1.525 15.163 1.725L5.988 10.925C5.788 11.125 5.55467 11.225 5.288 11.225C5.02133 11.225 4.788 11.125 4.588 10.925L0.288 6.625C0.088 6.425 -0.00783333 6.1875 0.0005 5.9125C0.00883333 5.6375 0.113 5.4 0.313 5.2C0.513 5 0.7505 4.9 1.0255 4.9C1.3005 4.9 1.538 5 1.738 5.2L5.288 8.775Z' },
+};
+
+function icon(name, size, rotate) {
+  const i = ICONS[name];
+  const [, , vw, vh] = i.vb.split(' ').map(Number);
+  const h = Math.round(size * vh / vw * 100) / 100;
+  const rot = rotate ? ` style="transform:rotate(${rotate}deg)"` : '';
+  return `<svg class="ic" width="${size}" height="${h}" viewBox="${i.vb}"${rot} xmlns="http://www.w3.org/2000/svg"><path d="${i.d}"/></svg>`;
+}
+
+function initIcons() {
+  document.querySelectorAll('[data-ic]').forEach(el => {
+    el.innerHTML = icon(el.dataset.ic, +el.dataset.icSize || 24, +el.dataset.icRotate || 0);
+  });
+}
+
 // ═══════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════
@@ -896,12 +926,38 @@ const DRAG_THRESHOLD = 8;  // px before drag starts
 const S = () => ST[LOTS[lotIdx].id];
 const L = () => LOTS[lotIdx];
 
+// Price derivation: weight is per head, so /head = /kg × weight.
+// hdManual marks which side was last entered; the other side derives.
 function calcHead() {
   const s = S();
   if (s.hdManual && s.priceHd !== null) return s.priceHd;
   if (s.priceKg !== null && s.weight !== null)
     return Math.round(parseFloat(s.priceKg) * parseFloat(s.weight));
   return s.priceHd;
+}
+
+function calcHeadTo() {
+  const s = S();
+  if (s.hdManual) return s.priceHdTo;
+  if (s.priceKgTo !== null && s.weight !== null)
+    return Math.round(parseFloat(s.priceKgTo) * parseFloat(s.weight));
+  return s.priceHdTo;
+}
+
+function calcKg() {
+  const s = S();
+  if (!s.hdManual) return s.priceKg;
+  if (s.priceHd !== null && s.weight)
+    return Math.round(s.priceHd / s.weight * 100) / 100;
+  return s.priceKg;
+}
+
+function calcKgTo() {
+  const s = S();
+  if (!s.hdManual) return s.priceKgTo;
+  if (s.priceHdTo !== null && s.weight)
+    return Math.round(s.priceHdTo / s.weight * 100) / 100;
+  return null;
 }
 
 function fmtKg(v) {
@@ -952,24 +1008,21 @@ function renderDetail() {
   wv.textContent = s.weight !== null ? s.weight : '—';
   wv.className = 'cell-val' + (s.weight === null ? ' empty' : '');
 
-  // Price /kg
+  // Price /kg (entered directly, or derived from /head ÷ weight)
   const pkv = document.getElementById('val-pricekg');
-  if (s.priceKg !== null) {
-    const from = fmtKg(s.priceKg);
-    const to   = s.priceKgTo !== null ? ` – ${fmtKg(s.priceKgTo)}` : '';
-    pkv.textContent = from + to;
+  const kg = calcKg(), kgTo = calcKgTo();
+  if (kg !== null) {
+    pkv.textContent = fmtKg(kg) + (kgTo !== null ? ` – ${fmtKg(kgTo)}` : '');
     pkv.className = 'cell-val';
   } else {
     pkv.textContent = '—'; pkv.className = 'cell-val empty';
   }
 
-  // Price /head
+  // Price /head (entered directly, or derived from /kg × weight)
   const phv = document.getElementById('val-pricehead');
-  const hd  = calcHead();
+  const hd = calcHead(), hdTo = calcHeadTo();
   if (hd !== null) {
-    const from = hd;
-    const to   = s.priceHdTo !== null ? ` – ${s.priceHdTo}` : '';
-    phv.textContent = from + to;
+    phv.textContent = hd + (hdTo !== null ? ` – ${hdTo}` : '');
     phv.className = 'cell-val';
   } else {
     phv.textContent = '—'; phv.className = 'cell-val empty';
@@ -997,11 +1050,12 @@ function renderBidderArea() {
     </div>
   </div>`;
 
+  const plus = icon('add', 16);
   if (s.outcome) {
     const lbl = { not_sold:'Not sold', passed_in:'Passed in', withdrawn:'Withdrawn', unknown:'?' }[s.outcome];
     blocks.push(`<div class="chips-row">
-      <div class="chip" onclick="openBidderSheet('ub')"><span class="chip-plus">+</span> Underbidder</div>
-      <div class="chip outcome" onclick="openNotSoldSheet()"><span class="chip-plus">&#8856;</span> ${lbl}</div>
+      <div class="chip" onclick="openBidderSheet('ub')">${plus} Underbidder</div>
+      <div class="chip outcome" onclick="openNotSoldSheet()">${icon('block', 16)} ${lbl}</div>
     </div>`);
     if (s.ubs.length) blocks.push(`<div class="bidder-section">${ubCell}</div>`);
   } else {
@@ -1011,11 +1065,14 @@ function renderBidderArea() {
     if (cells.length) blocks.push(`<div class="bidder-section">${cells.join('')}</div>`);
 
     let chips = '';
-    if (!s.buyer) chips += `<div class="chip" onclick="openBidderSheet('buyer')"><span class="chip-plus">+</span> Buyer</div>`;
-    chips +=       `<div class="chip" onclick="openBidderSheet('ub')"><span class="chip-plus">+</span> Underbidder</div>`;
-    if (!s.buyer) chips += `<div class="chip" onclick="openNotSoldSheet()"><span class="chip-plus">+</span> Not sold</div>`;
+    if (!s.buyer) chips += `<div class="chip" onclick="openBidderSheet('buyer')">${plus} Buyer</div>`;
+    chips +=       `<div class="chip" onclick="openBidderSheet('ub')">${plus} Underbidder</div>`;
+    if (!s.buyer) chips += `<div class="chip" onclick="openNotSoldSheet()">${plus} Not sold</div>`;
     blocks.push(`<div class="chips-row">${chips}</div>`);
   }
+
+  // Card accent border turns red while an outcome is active (per Figma)
+  document.querySelector('.lot-info-card').classList.toggle('ns', !!s.outcome);
 
   document.getElementById('bidder-area').innerHTML = blocks.join('');
 }
@@ -1126,11 +1183,11 @@ function openPriceSheet(mode) {
     mode === 'kg' ? 'Price per kg' : 'Price per head';
 
   pBufFrom = mode === 'kg'
-    ? (s.priceKg  !== null ? String(s.priceKg)  : '')
+    ? (calcKg()   !== null ? String(calcKg())   : '')
     : (calcHead() !== null ? String(calcHead()) : '');
   pBufTo = mode === 'kg'
-    ? (s.priceKgTo !== null ? String(s.priceKgTo) : '')
-    : (s.priceHdTo !== null ? String(s.priceHdTo) : '');
+    ? (calcKgTo()   !== null ? String(calcKgTo())   : '')
+    : (calcHeadTo() !== null ? String(calcHeadTo()) : '');
 
   focusPrice('from');
   renderPriceBufs();
@@ -1206,7 +1263,8 @@ function commitSimple() {
   const s = S();
   const v = sBuf ? parseFloat(sBuf) : null;
   s[sField] = (v !== null && !isNaN(v)) ? v : null;
-  if (sField === 'weight') s.hdManual = false;
+  // Weight changes flow through calcKg/calcHead — whichever price was
+  // entered last stays the source, the other side re-derives.
   closeTopSheet();
   renderDetail();
 }
@@ -1408,7 +1466,7 @@ function buildDrum(mode) {
   const s   = S();
   const inc = mode === 'kg' ? kgInc() : hdInc();
   const base = mode === 'kg'
-    ? (s.priceKg  !== null ? parseFloat(s.priceKg) : 0)
+    ? (calcKg()   !== null ? parseFloat(calcKg()) : 0)
     : (calcHead() !== null ? calcHead() : 0);
   const baseSteps = Math.round(base / inc);
   const lo = Math.max(0, baseSteps - DRUM_SPAN);
@@ -1571,6 +1629,7 @@ function bindPriceCells() {
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
+initIcons();
 renderList();
 bindPriceCells();
 </script>
