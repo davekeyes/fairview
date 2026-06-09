@@ -543,41 +543,59 @@
     .bidder-row.buyer-sel .bidder-check::after,
     .bidder-row.ub-sel    .bidder-check::after { display: block; }
 
-    /* ---- DRAG HUD ---- */
-    .drag-hud {
+    /* ---- PRICE OVERLAY (picker drum, as v2) ---- */
+    .price-overlay {
       position: fixed;
-      left: 12px; right: 12px;
+      width: 140px;
+      height: 200px;
       background: var(--n100);
-      border-top: 2px solid var(--sell);
-      border-radius: var(--r);
-      padding: 10px 14px;
+      border: 1px solid var(--n300);
+      border-radius: 16px;
+      overflow: hidden;
       z-index: 40;
-      pointer-events: none;
       opacity: 0;
-      transform: scale(0.97);
+      transform: scale(0.94);
+      pointer-events: none;
       transition: opacity 0.14s ease-out, transform 0.14s ease-out;
     }
-    .drag-hud.visible { opacity: 1; transform: scale(1); }
-    .drag-hud-inner { display: flex; align-items: center; justify-content: space-between; }
-    .drag-hud-vrow  { display: flex; align-items: baseline; gap: 4px; }
-    .drag-hud-val   { font-size: 36px; font-weight: 600; color: var(--n900); }
-    .drag-hud-unit  { font-size: 16px; font-style: italic; color: var(--n500); }
-    .drag-hud-inc   { font-size: 13px; font-weight: 500; color: var(--sell); min-width: 56px; }
+    .price-overlay.visible { opacity: 1; transform: scale(1); }
+    .price-overlay::before, .price-overlay::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 50px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .price-overlay::before { top: 0;    background: linear-gradient(to bottom, var(--n100), transparent); }
+    .price-overlay::after  { bottom: 0; background: linear-gradient(to top,   var(--n100), transparent); }
+
+    .po-track {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      will-change: transform;
+    }
+    .po-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      width: 100%;
+      overflow: hidden;
+      transition: height 0.12s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                  font-size 0.12s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                  color 0.12s, opacity 0.12s;
+    }
   </style>
 </head>
 <body>
 
 <div id="backdrop"></div>
 
-<!-- Price drag HUD — appears over price cells during swipe -->
-<div id="drag-hud" class="drag-hud">
-  <div class="drag-hud-inner">
-    <div class="drag-hud-inc" id="hud-inc">↕ $1</div>
-    <div class="drag-hud-vrow">
-      <div class="drag-hud-val"  id="hud-val">—</div>
-      <div class="drag-hud-unit" id="hud-unit">/head</div>
-    </div>
-  </div>
+<!-- Price overlay — floating picker drum shown while dragging a price cell -->
+<div class="price-overlay" id="priceOverlay">
+  <div class="po-track" id="poTrack"></div>
 </div>
 
 <!-- ═══ SCREEN: LOT LIST ═══ -->
@@ -866,10 +884,7 @@ let bMode      = 'buyer';
 let dragMode   = null;     // 'kg' | 'head' | null
 let dragStartY = 0;
 let dragMoved  = false;
-let dragBaseKg = 0;
-let dragBaseHd = 0;
 const DRAG_THRESHOLD = 8;  // px before drag starts
-const PX_PER_STEP    = 22; // px of drag per one increment step
 
 // ═══════════════════════════════════════════
 // HELPERS
@@ -1065,8 +1080,11 @@ document.getElementById('detail-back').onclick = leaveLot;
 // ═══════════════════════════════════════════
 // SHEET STACK
 // ═══════════════════════════════════════════
+let sheetOpenedAt = 0;
+
 function openSheet(id) {
   sheetStack.push(id);
+  sheetOpenedAt = performance.now();
   document.getElementById(id).classList.add('open');
   document.getElementById('backdrop').classList.add('on');
 }
@@ -1077,7 +1095,12 @@ function closeTopSheet() {
   if (!sheetStack.length) document.getElementById('backdrop').classList.remove('on');
 }
 
-document.getElementById('backdrop').onclick = () => closeTopSheet();
+// Ignore the synthesized click that follows the pointerup which opened the
+// sheet — otherwise it lands on the backdrop and closes it instantly.
+document.getElementById('backdrop').onclick = () => {
+  if (performance.now() - sheetOpenedAt < 400) return;
+  closeTopSheet();
+};
 
 // ═══════════════════════════════════════════
 // NOT SOLD SHEET
@@ -1378,89 +1401,171 @@ function pickBidder(name) {
 // ═══════════════════════════════════════════
 // PRICE CELL DRAG-TO-INCREMENT
 // ═══════════════════════════════════════════
-function hudIncLabel(mode, direction) {
-  const inc = mode === 'kg' ? kgInc() : hdInc();
-  const label = mode === 'kg'
-    ? (inc < 1 ? Math.round(inc * 100) + 'c' : '$' + inc) + '/kg'
-    : '$' + inc + '/head';
-  const arrow = direction > 0 ? '▲ ' : direction < 0 ? '▼ ' : '↕ ';
-  return arrow + label;
+// Floating drum overlay, as v2: variable item sizes by distance from
+// centre, high values at top, drag maps to increment steps, momentum coast.
+const OW = 140, OH = 200, OCTR = 100; // overlay width/height/vertical centre
+const DRAG_SENS = 34;                 // px of drag per increment step
+const ITEM_HEIGHTS = [42, 34, 22, 16, 12];
+const DRUM_SPAN = 80;                 // steps either side of start value
+
+let drumVals = [];   // item values in DOM order (top = highest)
+let drumIdx  = 0;    // DOM index of centred item
+let ovVelY = 0, ovPrevY = 0, ovPrevT = 0, ovRafId = null;
+let ovDragIdx = 0;
+
+function itemH(d) { return d < ITEM_HEIGHTS.length ? ITEM_HEIGHTS[d] : 0; }
+
+function fmtDrum(v, mode) {
+  return mode === 'kg' ? v.toFixed(2) : '$' + Math.round(v).toLocaleString();
 }
 
-function showHUD(mode) {
-  const cell = document.querySelector('.price-cell');
-  const rect = cell.getBoundingClientRect();
-  const hud  = document.getElementById('drag-hud');
-  hud.style.top    = rect.top + 'px';
-  hud.style.height = rect.height + 'px';
-  hud.style.padding = '0 14px';
-  hud.classList.add('visible');
-  updateHUD(mode, 0);
-}
-
-function updateHUD(mode, direction) {
+function buildDrum(mode) {
   const s   = S();
-  const val = mode === 'kg' ? s.priceKg : calcHead();
-  document.getElementById('hud-val').textContent  =
-    mode === 'kg' ? (val !== null ? (+val).toFixed(2) : '—') : (val !== null ? Math.round(val) : '—');
-  document.getElementById('hud-unit').textContent = mode === 'kg' ? '/kg' : '/head';
-  document.getElementById('hud-inc').textContent  = hudIncLabel(mode, direction);
+  const inc = mode === 'kg' ? kgInc() : hdInc();
+  const base = mode === 'kg'
+    ? (s.priceKg  !== null ? parseFloat(s.priceKg) : 0)
+    : (calcHead() !== null ? calcHead() : 0);
+  const baseSteps = Math.round(base / inc);
+  const lo = Math.max(0, baseSteps - DRUM_SPAN);
+  const hi = baseSteps + DRUM_SPAN;
+
+  drumVals = [];
+  for (let k = hi; k >= lo; k--) drumVals.push(k * inc);
+  drumIdx = hi - baseSteps;
+
+  document.getElementById('poTrack').innerHTML =
+    drumVals.map(v => `<div class="po-item">${fmtDrum(v, mode)}</div>`).join('');
 }
 
-function hideHUD() {
-  document.getElementById('drag-hud').classList.remove('visible');
+function drumOffset(p) {
+  let sum = 0;
+  for (let j = 0; j < p; j++) sum += itemH(p - j);
+  return OCTR - ITEM_HEIGHTS[0] / 2 - sum;
+}
+
+function applyDrum(animate) {
+  const track = document.getElementById('poTrack');
+  track.style.transition = animate
+    ? 'transform 0.12s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    : 'none';
+  track.style.transform = `translateY(${drumOffset(drumIdx)}px)`;
+}
+
+function styleDrumItems() {
+  const items = document.getElementById('poTrack').children;
+  for (let i = 0; i < items.length; i++) {
+    const d = Math.abs(i - drumIdx);
+    let h, fs, col, op;
+    switch (d) {
+      case 0: h=42; fs='34px'; col='#f2f4f6'; op=1;    break;
+      case 1: h=34; fs='20px'; col='#c8cdd3'; op=1;    break;
+      case 2: h=22; fs='14px'; col='#c8cdd3'; op=0.65; break;
+      case 3: h=16; fs='11px'; col='#9ca3ac'; op=0.4;  break;
+      case 4: h=12; fs='9px';  col='#9ca3ac'; op=0.2;  break;
+      default:h=0;  fs='0px';  col='#9ca3ac'; op=0;    break;
+    }
+    items[i].style.height   = h + 'px';
+    items[i].style.fontSize = fs;
+    items[i].style.color    = col;
+    items[i].style.opacity  = op;
+  }
+}
+
+function showPriceOverlay(mode, anchorEl) {
+  buildDrum(mode);
+  applyDrum(false);
+  styleDrumItems();
+
+  const overlay = document.getElementById('priceOverlay');
+  const rect = anchorEl.getBoundingClientRect();
+
+  // Horizontal: left-align with /kg half, right-align with /head half
+  if (mode === 'kg') overlay.style.left = rect.left + 'px';
+  else               overlay.style.left = Math.max(8, rect.right - OW) + 'px';
+
+  // Vertical: centre on the price row, clamped to viewport
+  const top = Math.max(8, Math.min(window.innerHeight - OH - 8,
+    rect.top + rect.height / 2 - OH / 2));
+  overlay.style.top = top + 'px';
+
+  overlay.classList.add('visible');
+}
+
+function hidePriceOverlay() {
+  document.getElementById('priceOverlay').classList.remove('visible');
+}
+
+function drumCommit() {
+  const s = S();
+  const v = drumVals[drumIdx];
+  if (dragMode === 'kg') { s.priceKg = v; s.hdManual = false; }
+  else                   { s.priceHd = v; s.hdManual = true;  }
+  renderDetail();
 }
 
 function priceCellDown(e, mode) {
+  if (ovRafId) { cancelAnimationFrame(ovRafId); ovRafId = null; }
   dragMode   = mode;
   dragMoved  = false;
   dragStartY = e.clientY;
-  const s    = S();
-  dragBaseKg = s.priceKg  !== null ? parseFloat(s.priceKg) : 0;
-  dragBaseHd = calcHead() !== null ? calcHead() : 0;
+  ovVelY = 0; ovPrevY = e.clientY; ovPrevT = performance.now();
   e.currentTarget.setPointerCapture(e.pointerId);
 }
 
 function priceCellMove(e) {
   if (!dragMode) return;
   const dy = e.clientY - dragStartY;
+
   if (!dragMoved && Math.abs(dy) < DRAG_THRESHOLD) return;
 
   if (!dragMoved) {
     dragMoved = true;
-    showHUD(dragMode);
+    showPriceOverlay(dragMode, e.currentTarget);
+    ovDragIdx = drumIdx;
   }
 
-  // Negative dy = dragged up = price increase
-  const steps = -Math.round(dy / PX_PER_STEP);
-  const s = S();
+  const now = performance.now(), dt = now - ovPrevT;
+  if (dt > 0) ovVelY = (ovPrevY - e.clientY) / dt;
+  ovPrevY = e.clientY; ovPrevT = now;
 
-  if (dragMode === 'kg') {
-    const inc = kgInc();
-    const raw  = dragBaseKg + steps * inc;
-    s.priceKg  = Math.max(0, Math.round(raw / inc) * inc);
-    s.hdManual = false;
-  } else {
-    const inc = hdInc();
-    const raw  = dragBaseHd + steps * inc;
-    s.priceHd  = Math.max(0, Math.round(raw / inc) * inc);
-    s.hdManual = true;
-  }
+  // Drag up (delta positive) → DOM index increases → lower value (drum: top = high)
+  const delta = dragStartY - e.clientY;
+  drumIdx = Math.max(0, Math.min(drumVals.length - 1,
+    Math.round(ovDragIdx + delta / DRAG_SENS)));
 
-  updateHUD(dragMode, -dy);   // dy negative = up = positive direction
-  renderDetail();
+  applyDrum(false);
+  styleDrumItems();
+  drumCommit();
 }
 
 function priceCellUp(e) {
   if (!dragMode) return;
-  hideHUD();
+
   if (!dragMoved) {
     const m = dragMode;
     dragMode = null;
     openPriceSheet(m);
-  } else {
-    dragMode = null;
+    return;
   }
+
+  hidePriceOverlay();
+  // Momentum coast after drag
+  let v = ovVelY;
+  const coastMode = dragMode;
+  function coast() {
+    v *= 0.82;
+    if (Math.abs(v) < 0.03) return;
+    drumIdx = Math.max(0, Math.min(drumVals.length - 1,
+      Math.round(drumIdx + v * 1.4)));
+    const s = S();
+    const val = drumVals[drumIdx];
+    if (coastMode === 'kg') { s.priceKg = val; s.hdManual = false; }
+    else                    { s.priceHd = val; s.hdManual = true;  }
+    renderDetail();
+    ovRafId = requestAnimationFrame(coast);
+  }
+  ovRafId = requestAnimationFrame(coast);
+  dragMode = null;
 }
 
 // Bind pointer events to price half cells
@@ -1469,12 +1574,12 @@ function bindPriceCells() {
     const el = document.getElementById('ph-' + mode);
     el.addEventListener('pointerdown', e => priceCellDown(e, mode));
     el.addEventListener('pointermove', priceCellMove);
-    el.addEventListener('pointerup',   priceCellUp);
-    el.addEventListener('pointercancel', () => { dragMode = null; });
   });
-  // Safety net: document-level pointerup in case capture is lost
-  document.addEventListener('pointerup', e => {
-    if (dragMode) priceCellUp(e);
+  // pointerup on document so it fires even when setPointerCapture fails
+  // (e.g. Chrome DevTools touch emulation). dragMode guards false triggers.
+  document.addEventListener('pointerup', e => { if (dragMode) priceCellUp(e); });
+  document.addEventListener('pointercancel', () => {
+    if (dragMode) { hidePriceOverlay(); dragMode = null; }
   });
 }
 
