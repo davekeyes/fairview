@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#11151b">
+  <title>Fairview v3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg:    #11151b;
+      --n100:  #1f252d;
+      --n200:  #323943;
+      --n300:  #4d5560;
+      --n500:  #9ca3ac;
+      --n700:  #e4e7ea;
+      --n800:  #f2f4f6;
+      --n900:  #ffffff;
+      --sell:  #f97316;
+      --green: #44a200;
+      --red:   #be3030;
+      --r:     8px;
+      --r-pill: 999px;
+      font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--n800);
+      height: 100%; height: 100dvh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- SCREENS ---- */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      overflow: hidden;
+      transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity  0.32s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform;
+      padding-top: env(safe-area-inset-top);
+    }
+
+    /* ---- LOT LIST SCREEN ---- */
+    .list-appbar {
+      flex-shrink: 0;
+      padding: 10px 16px 0;
+      text-align: center;
+    }
+    .auction-title {
+      font-size: 22px; font-weight: 600; color: var(--n900);
+      margin-top: 4px;
+    }
+    .auction-meta {
+      font-size: 13px; color: var(--n500); margin-top: 2px;
+    }
+    .add-lot-btn {
+      display: block; width: 100%;
+      margin-top: 12px;
+      padding: 14px;
+      background: var(--n200);
+      border: none; border-top: 1px solid var(--n300);
+      border-radius: var(--r-pill);
+      color: var(--n800); font-size: 16px; font-weight: 500;
+      font-family: inherit; cursor: pointer; text-align: center;
+    }
+    .add-lot-btn:active { opacity: 0.7; }
+
+    .lot-list {
+      flex: 1; overflow-y: auto;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .lot-row {
+      display: flex; align-items: center; gap: 10px;
+      cursor: pointer;
+    }
+    .lot-row:active .lot-card { opacity: 0.7; }
+    .lot-num {
+      font-size: 13px; color: var(--n500);
+      width: 28px; text-align: right; flex-shrink: 0;
+    }
+    .lot-card {
+      flex: 1; background: var(--n200);
+      border-radius: var(--r);
+      padding: 10px 36px 10px 14px;
+      position: relative;
+      transition: opacity 0.12s;
+    }
+    .lot-card-name {
+      font-size: 16px; font-weight: 600; color: var(--n900);
+    }
+    .lot-card-desc {
+      font-size: 13px; color: var(--n500); margin-top: 1px;
+    }
+    .lot-dot {
+      position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%);
+      width: 7px; height: 7px; border-radius: 50%;
+    }
+    .lot-dot.sold   { background: var(--green); }
+    .lot-dot.unsold { background: var(--red); }
+
+    /* ---- DETAIL SCREEN ---- */
+    #screen-detail { transform: translateX(100%); }
+    #screen-detail.active { transform: translateX(0); }
+    #screen-list.pushed   { transform: translateX(-28%); opacity: 0.5; }
+
+    .detail-appbar {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px 8px;
+    }
+    .detail-back {
+      font-size: 16px; color: var(--sell); cursor: pointer;
+      padding: 4px 0; display: flex; align-items: center; gap: 2px;
+      -webkit-user-select: none; user-select: none;
+    }
+    .detail-lot-label {
+      font-size: 17px; font-weight: 500; color: var(--n800);
+    }
+    .detail-edit {
+      font-size: 18px; color: var(--n500); cursor: pointer;
+      padding: 4px; opacity: 0.8;
+    }
+
+    .detail-body {
+      flex: 1; overflow-y: auto;
+      padding: 4px 12px 96px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Lot card (gradient, orange top accent) */
+    .lot-info-card {
+      background: linear-gradient(to bottom, var(--n100) 0%, #181d24 40%, var(--bg) 100%);
+      border-top: 2px solid var(--sell);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    .lot-info-head {
+      padding: 4px 4px 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .lot-client { font-size: 24px; font-weight: 600; color: var(--n800); }
+    .lot-desc   { font-size: 16px; font-weight: 500; color: var(--n700); }
+
+    /* ---- CELLS ---- */
+    .cell-row { display: flex; gap: 10px; }
+
+    .cell {
+      background: var(--n200);
+      border-top: 1px solid var(--n300);
+      border-radius: var(--r);
+      padding: 8px 12px 12px;
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .cell:active { opacity: 0.7; }
+
+    .cell-lbl {
+      font-size: 11px; font-weight: 500; color: var(--n500);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      line-height: 1; margin-bottom: 6px;
+    }
+    .cell-val {
+      font-size: 24px; font-weight: 500; color: var(--n800); line-height: 1;
+    }
+    .cell-val.empty { color: var(--n300); }
+    .cell-unit {
+      font-size: 14px; font-style: italic; color: var(--n500); line-height: 1;
+    }
+    .cell-vrow {
+      display: flex; align-items: baseline; gap: 3px;
+    }
+
+    .cell-tally  { width: 130px; flex-shrink: 0; }
+    .cell-weight { flex: 1; }
+    .cell-weight .cell-vrow { justify-content: flex-end; }
+
+    /* Price cell — split horizontally */
+    .price-cell {
+      display: flex; border-radius: var(--r); overflow: hidden;
+    }
+    .price-half {
+      background: var(--n200);
+      border-top: 1px solid var(--n300);
+      padding: 8px 12px 12px;
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .price-half:active { opacity: 0.7; }
+    .price-half.left {
+      width: 130px; flex-shrink: 0;
+      border-radius: var(--r) 0 0 var(--r);
+    }
+    .price-half.right {
+      flex: 1;
+      border-radius: 0 var(--r) var(--r) 0;
+      border-left: 1px solid var(--n300);
+    }
+    .price-half.right .cell-vrow { justify-content: flex-end; }
+    .price-half .cell-lbl.ghost { opacity: 0; }
+
+    /* Notes cell */
+    .cell-notes { min-height: 88px; cursor: default; }
+    .cell-notes .cell-val {
+      font-size: 18px; color: var(--n700);
+      white-space: pre-wrap; line-height: 1.4;
+    }
+
+    /* ---- BIDDER AREA ---- */
+    .bidder-section {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .bidder-cell {
+      background: var(--n200);
+      border-top: 1px solid var(--n300);
+      border-radius: var(--r);
+      padding: 8px 12px 12px;
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .bidder-cell.ub { border-top-color: var(--green); }
+    .bidder-cell:active { opacity: 0.7; }
+    .bidder-cell-lbl {
+      font-size: 11px; font-weight: 500; color: var(--n500);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .bidder-cell.ub .bidder-cell-lbl { color: var(--green); }
+    .bidder-names { display: flex; flex-direction: column; gap: 4px; }
+    .bidder-name {
+      font-size: 20px; font-weight: 500; color: var(--n800);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+
+    /* ---- CHIPS ---- */
+    .chips-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      display: flex; align-items: center; gap: 4px;
+      padding: 8px 14px 8px 10px;
+      background: var(--n200); border-top: 1px solid var(--n300);
+      border-radius: var(--r-pill);
+      font-size: 14px; font-weight: 500; color: var(--n700);
+      cursor: pointer; white-space: nowrap;
+      -webkit-user-select: none; user-select: none;
+    }
+    .chip:active { opacity: 0.7; }
+    .chip-plus { font-size: 15px; line-height: 1; }
+    .chip.outcome {
+      background: rgba(190,48,48,0.12);
+      border-top-color: var(--red); color: var(--red);
+    }
+
+    /* ---- ACTION BAR ---- */
+    .action-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      display: flex; gap: 8px; align-items: center;
+      border-top: 1px solid var(--n300);
+      background: linear-gradient(to bottom, rgba(17,21,27,0) 0%, var(--bg) 30%);
+    }
+    .btn-round {
+      width: 56px; height: 56px; flex-shrink: 0;
+      border-radius: var(--r-pill);
+      background: var(--n200); border-top: 1px solid var(--n500);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 22px; font-weight: 400; color: var(--n800);
+      -webkit-user-select: none; user-select: none;
+    }
+    .btn-round:active { opacity: 0.6; }
+    .btn-round.dim { opacity: 0.3; pointer-events: none; }
+    .btn-round.hash { font-size: 16px; font-weight: 600; }
+
+    .btn-next {
+      flex: 1; min-width: 0; height: 56px;
+      border-radius: var(--r-pill);
+      background: var(--n200); border-top: 1px solid var(--n500);
+      display: flex; align-items: center;
+      padding: 0 14px 0 16px; gap: 8px;
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .btn-next:active { opacity: 0.7; }
+    .btn-next-text { flex: 1; min-width: 0; text-align: right; }
+    .btn-next-lbl {
+      font-size: 11px; font-weight: 500; color: var(--n500);
+      text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;
+    }
+    .btn-next-name {
+      font-size: 16px; font-weight: 500; color: var(--n900);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+    .btn-next-arrow { font-size: 20px; color: var(--n700); flex-shrink: 0; }
+
+    /* ---- BACKDROP ---- */
+    #backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 50;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    #backdrop.on { opacity: 1; pointer-events: all; }
+
+    /* ---- SHEETS ---- */
+    .sheet {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--n100);
+      border-radius: 20px 20px 0 0;
+      z-index: 100;
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      padding-bottom: env(safe-area-inset-bottom);
+      max-height: 94dvh; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sheet.open { transform: translateY(0); }
+
+    .sheet-grip {
+      width: 36px; height: 4px; background: var(--n300);
+      border-radius: 2px; margin: 10px auto 0;
+    }
+    .sheet-title {
+      font-size: 20px; font-weight: 600; color: var(--n900);
+      padding: 14px 20px 10px;
+    }
+    .sheet-close {
+      text-align: center; padding: 14px 16px 6px;
+      font-size: 16px; color: var(--n500);
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .sheet-close:active { opacity: 0.7; }
+
+    /* ---- NOT SOLD SHEET ---- */
+    .outcome-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; padding: 4px 16px 4px;
+    }
+    .outcome-btn {
+      padding: 15px 12px;
+      border-radius: var(--r-pill);
+      border: 1px solid var(--n300);
+      background: transparent;
+      color: var(--n800); font-size: 16px; font-weight: 500;
+      font-family: inherit; text-align: center;
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+      transition: background 0.14s, border-color 0.14s, color 0.14s;
+    }
+    .outcome-btn:active { opacity: 0.7; }
+    .outcome-btn.sel {
+      background: rgba(190,48,48,0.14);
+      border-color: var(--red); color: var(--red);
+    }
+
+    /* ---- PRICE SHEET ---- */
+    .price-inputs {
+      display: flex; gap: 10px; padding: 4px 16px 10px;
+    }
+    .price-field {
+      flex: 1; background: var(--n200);
+      border: 1px solid var(--n300); border-radius: var(--r);
+      padding: 10px 12px; cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .price-field.focused { border-color: var(--sell); }
+    .price-field-lbl {
+      font-size: 10px; font-weight: 500; color: var(--n500);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+    }
+    .price-field-val {
+      font-size: 24px; font-weight: 500; color: var(--n800);
+      min-height: 28px; display: flex; align-items: baseline; gap: 3px;
+    }
+    .price-currency { font-size: 14px; color: var(--n500); }
+    .price-cursor {
+      display: inline-block; width: 2px; height: 22px;
+      background: var(--sell); margin-left: 1px;
+      animation: blink 1s step-end infinite;
+      vertical-align: text-bottom;
+    }
+    .price-field:not(.focused) .price-cursor { display: none; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .inc-link-row { display: flex; justify-content: center; padding: 0 16px 10px; }
+    .inc-link {
+      padding: 7px 18px;
+      background: var(--n200); border: 1px solid var(--n300);
+      border-radius: var(--r-pill);
+      font-size: 13px; color: var(--n700);
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .inc-link:active { opacity: 0.7; }
+
+    .set-btn {
+      display: block; width: calc(100% - 32px);
+      margin: 0 16px 10px;
+      padding: 16px; border: none; border-radius: var(--r-pill);
+      background: var(--n900); color: var(--bg);
+      font-size: 17px; font-weight: 600; font-family: inherit;
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .set-btn:active { opacity: 0.85; }
+
+    /* ---- NUMPAD ---- */
+    .numpad {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; padding: 6px 12px 10px;
+    }
+    .nk {
+      padding: 17px 8px;
+      background: var(--n200); border-radius: var(--r);
+      font-size: 22px; font-weight: 400; color: var(--n800);
+      text-align: center; cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+      transition: opacity 0.1s;
+    }
+    .nk:active { opacity: 0.55; }
+    .nk.empty { background: transparent; cursor: default; }
+    .nk.back  { color: var(--n500); }
+
+    /* ---- INCREMENTS SHEET ---- */
+    .mode-toggle {
+      display: flex; background: var(--bg);
+      border-radius: var(--r-pill); margin: 0 16px 14px; padding: 3px;
+    }
+    .mode-tab {
+      flex: 1; padding: 10px;
+      text-align: center; border-radius: var(--r-pill);
+      font-size: 16px; font-weight: 500; color: var(--n500);
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+      -webkit-user-select: none; user-select: none;
+    }
+    .mode-tab.active { background: var(--n200); color: var(--n800); }
+
+    .inc-table { padding: 0 16px; }
+    .inc-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px; margin-bottom: 8px;
+    }
+    .inc-cell {
+      padding: 13px 8px; text-align: center;
+      border-radius: var(--r-pill);
+      font-size: 16px; font-weight: 500; color: var(--n700);
+      cursor: pointer; border: 1px solid transparent;
+      -webkit-user-select: none; user-select: none;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .inc-cell.sel { background: var(--n200); border-color: var(--n300); color: var(--n900); }
+    .inc-cell:active { opacity: 0.7; }
+
+    /* ---- JUMP SHEET ---- */
+    .jump-row { display: flex; gap: 10px; padding: 4px 16px 10px; align-items: center; }
+    .jump-display {
+      flex: 1; background: var(--n200); border: 1px solid var(--n300);
+      border-radius: var(--r); padding: 12px 16px;
+      display: flex; align-items: center; min-height: 50px;
+    }
+    .jump-display-val { font-size: 20px; font-weight: 500; color: var(--n800); }
+    .jump-display-ph  { font-size: 16px; color: var(--n500); }
+    .jump-confirm {
+      width: 50px; height: 50px; flex-shrink: 0;
+      background: var(--n200); border: 1px solid var(--n300);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 20px; color: var(--n800);
+      -webkit-user-select: none; user-select: none;
+    }
+    .jump-confirm:active { opacity: 0.7; }
+
+    .jump-lots { padding: 0 16px; max-height: 188px; overflow-y: auto; }
+    .jump-lot-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--n200);
+      cursor: pointer;
+    }
+    .jump-lot-row:last-child { border-bottom: none; }
+    .jump-lot-row:active { opacity: 0.7; }
+    .jump-lot-num { font-size: 14px; color: var(--n500); width: 28px; text-align: right; flex-shrink: 0; }
+    .jump-lot-name { font-size: 16px; font-weight: 600; color: var(--n900); }
+    .jump-lot-desc { font-size: 12px; color: var(--n500); }
+
+    /* ---- BIDDER SHEET ---- */
+    .bidder-search {
+      display: block; width: calc(100% - 32px);
+      margin: 0 16px 6px;
+      padding: 10px 14px;
+      background: var(--n200); border: 1px solid var(--n300);
+      border-radius: var(--r);
+      font-size: 16px; color: var(--n800);
+      font-family: inherit; outline: none;
+      caret-color: var(--sell);
+    }
+    .bidder-search.ub { caret-color: var(--green); }
+
+    .bidder-list { padding: 0 16px; max-height: 340px; overflow-y: auto; }
+    .bidder-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 0; border-bottom: 1px solid var(--n200);
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .bidder-row:last-child { border-bottom: none; }
+    .bidder-row:active { opacity: 0.7; }
+    .bidder-row-name { font-size: 18px; font-weight: 500; color: var(--n800); }
+    .bidder-row.buyer-sel .bidder-row-name { color: var(--sell); }
+    .bidder-row.ub-sel    .bidder-row-name { color: var(--green); }
+
+    .bidder-check {
+      width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid var(--n300);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .bidder-row.buyer-sel .bidder-check { background: var(--sell);  border-color: var(--sell); }
+    .bidder-row.ub-sel    .bidder-check { background: var(--green); border-color: var(--green); }
+    .bidder-check::after {
+      content: ''; display: none;
+      width: 5px; height: 9px;
+      border: 2px solid #fff; border-top: none; border-left: none;
+      transform: rotate(42deg) translate(-1px, -1px);
+    }
+    .bidder-row.buyer-sel .bidder-check::after,
+    .bidder-row.ub-sel    .bidder-check::after { display: block; }
+  </style>
+</head>
+<body>
+
+<div id="backdrop"></div>
+
+<!-- ═══ SCREEN: LOT LIST ═══ -->
+<div id="screen-list" class="screen">
+  <div class="list-appbar">
+    <div class="auction-title">Stortford Lodge Saleyards</div>
+    <div class="auction-meta">Thu 4 Jun &middot; 11:30am</div>
+    <button class="add-lot-btn">Add lot</button>
+  </div>
+  <div class="lot-list" id="lot-list-el"></div>
+</div>
+
+<!-- ═══ SCREEN: LOT DETAIL ═══ -->
+<div id="screen-detail" class="screen">
+  <div class="detail-appbar">
+    <div class="detail-back" id="detail-back">&#8249; Auction</div>
+    <div class="detail-lot-label" id="detail-lot-label">Lot —</div>
+    <div class="detail-edit">&#x270F;&#xFE0E;</div>
+  </div>
+
+  <div class="detail-body" id="detail-body">
+    <div class="lot-info-card">
+      <div class="lot-info-head">
+        <div class="lot-client" id="lot-client"></div>
+        <div class="lot-desc"   id="lot-desc"></div>
+      </div>
+
+      <!-- Row: Tally + Weight -->
+      <div class="cell-row">
+        <div class="cell cell-tally" onclick="openSimpleSheet('tally')">
+          <div class="cell-lbl">Tally</div>
+          <div class="cell-vrow">
+            <div class="cell-val" id="val-tally">—</div>
+          </div>
+        </div>
+        <div class="cell cell-weight" onclick="openSimpleSheet('weight')">
+          <div class="cell-lbl">Weight</div>
+          <div class="cell-vrow">
+            <div class="cell-val" id="val-weight">—</div>
+            <div class="cell-unit">kg</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price (split) -->
+      <div class="price-cell">
+        <div class="price-half left" onclick="openPriceSheet('kg')">
+          <div class="cell-lbl">Price</div>
+          <div class="cell-vrow">
+            <div class="cell-val" id="val-pricekg">—</div>
+            <div class="cell-unit">/kg</div>
+          </div>
+        </div>
+        <div class="price-half right" onclick="openPriceSheet('head')">
+          <div class="cell-lbl ghost">Price</div>
+          <div class="cell-vrow">
+            <div class="cell-val" id="val-pricehead">—</div>
+            <div class="cell-unit">/head</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="cell cell-notes" onclick="openNotesSheet()">
+        <div class="cell-lbl">Notes</div>
+        <div class="cell-val" id="val-notes"></div>
+      </div>
+
+      <!-- Buyer / underbidder area -->
+      <div id="bidder-area"></div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <div class="btn-round" id="btn-prev" onclick="goPrev()">&#8249;</div>
+    <div class="btn-round hash" id="btn-hash" onclick="openJumpSheet()">#</div>
+    <div class="btn-next" id="btn-next" onclick="goNext()">
+      <div class="btn-next-text">
+        <div class="btn-next-lbl"  id="next-lbl">NEXT LOT —</div>
+        <div class="btn-next-name" id="next-name">—</div>
+      </div>
+      <div class="btn-next-arrow">&#8250;</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SHEET: NOT SOLD ═══ -->
+<div id="sheet-notsold" class="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-title">Not sold</div>
+  <div class="outcome-grid">
+    <button class="outcome-btn" id="obtn-not_sold"   onclick="setOutcome('not_sold')">Not sold</button>
+    <button class="outcome-btn" id="obtn-passed_in"  onclick="setOutcome('passed_in')">Passed in</button>
+    <button class="outcome-btn" id="obtn-withdrawn"  onclick="setOutcome('withdrawn')">Withdrawn</button>
+    <button class="outcome-btn" id="obtn-unknown"    onclick="setOutcome('unknown')">?</button>
+  </div>
+  <div class="sheet-close" onclick="closeTopSheet()">Close</div>
+</div>
+
+<!-- ═══ SHEET: PRICE ═══ -->
+<div id="sheet-price" class="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-title" id="price-title">Price per kg</div>
+  <div class="price-inputs">
+    <div class="price-field focused" id="pfield-from" onclick="focusPrice('from')">
+      <div class="price-field-lbl">From</div>
+      <div class="price-field-val">
+        <span class="price-currency">$</span>
+        <span id="pbuf-from"></span><span class="price-cursor"></span>
+      </div>
+    </div>
+    <div class="price-field" id="pfield-to" onclick="focusPrice('to')">
+      <div class="price-field-lbl">To (Optional)</div>
+      <div class="price-field-val">
+        <span class="price-currency">$</span>
+        <span id="pbuf-to"></span><span class="price-cursor"></span>
+      </div>
+    </div>
+  </div>
+  <div class="inc-link-row">
+    <div class="inc-link" onclick="openIncFromPrice()">Bid increments</div>
+  </div>
+  <button class="set-btn" onclick="commitPrice()">Set</button>
+  <div class="numpad">
+    <div class="nk" onclick="pTap('1')">1</div><div class="nk" onclick="pTap('2')">2</div><div class="nk" onclick="pTap('3')">3</div>
+    <div class="nk" onclick="pTap('4')">4</div><div class="nk" onclick="pTap('5')">5</div><div class="nk" onclick="pTap('6')">6</div>
+    <div class="nk" onclick="pTap('7')">7</div><div class="nk" onclick="pTap('8')">8</div><div class="nk" onclick="pTap('9')">9</div>
+    <div class="nk" onclick="pTap('.')">.</div><div class="nk" onclick="pTap('0')">0</div>
+    <div class="nk back" onclick="pTap('x')">&#x232B;</div>
+  </div>
+</div>
+
+<!-- ═══ SHEET: SIMPLE (tally / weight) ═══ -->
+<div id="sheet-simple" class="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-title" id="simple-title">Tally</div>
+  <div class="price-inputs">
+    <div class="price-field focused">
+      <div class="price-field-lbl" id="simple-lbl">Value</div>
+      <div class="price-field-val">
+        <span id="sbuf"></span><span class="price-cursor"></span>
+        <span id="simple-unit" class="price-currency"></span>
+      </div>
+    </div>
+  </div>
+  <button class="set-btn" onclick="commitSimple()">Set</button>
+  <div class="numpad">
+    <div class="nk" onclick="sTap('1')">1</div><div class="nk" onclick="sTap('2')">2</div><div class="nk" onclick="sTap('3')">3</div>
+    <div class="nk" onclick="sTap('4')">4</div><div class="nk" onclick="sTap('5')">5</div><div class="nk" onclick="sTap('6')">6</div>
+    <div class="nk" onclick="sTap('7')">7</div><div class="nk" onclick="sTap('8')">8</div><div class="nk" onclick="sTap('9')">9</div>
+    <div class="nk" id="snk-dot" onclick="sTap('.')">.</div>
+    <div class="nk" onclick="sTap('0')">0</div>
+    <div class="nk back" onclick="sTap('x')">&#x232B;</div>
+  </div>
+</div>
+
+<!-- ═══ SHEET: NOTES ═══ -->
+<div id="sheet-notes" class="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-title">Notes</div>
+  <div style="padding:0 16px 10px">
+    <textarea id="notes-ta" rows="4"
+      style="width:100%;background:var(--n200);border:1px solid var(--n300);border-radius:var(--r);
+             padding:12px;font-size:18px;color:var(--n800);font-family:inherit;resize:none;
+             outline:none;caret-color:var(--sell);"
+      placeholder="Add a note…"></textarea>
+  </div>
+  <button class="set-btn" onclick="commitNotes()">Set</button>
+</div>
+
+<!-- ═══ SHEET: INCREMENTS ═══ -->
+<div id="sheet-inc" class="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-title">Bidding increments</div>
+  <div class="mode-toggle">
+    <div class="mode-tab active" id="itab-kg"   onclick="setIncMode('kg')">/kg</div>
+    <div class="mode-tab"        id="itab-head" onclick="setIncMode('head')">/head</div>
+  </div>
+  <div class="inc-table" id="inc-table"></div>
+  <div class="sheet-close" onclick="closeIncBack()">Close</div>
+</div>
+
+<!-- ═══ SHEET: JUMP TO LOT ═══ -->
+<div id="sheet-jump" class="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-title">Jump to lot</div>
+  <div class="jump-row">
+    <div class="jump-display">
+      <span class="jump-display-val" id="jump-val" style="display:none"></span>
+      <span class="jump-display-ph"  id="jump-ph">Enter lot number</span>
+    </div>
+    <div class="jump-confirm" onclick="commitJump()">&#10003;</div>
+  </div>
+  <div class="jump-lots" id="jump-lots"></div>
+  <div class="numpad">
+    <div class="nk" onclick="jTap('1')">1</div><div class="nk" onclick="jTap('2')">2</div><div class="nk" onclick="jTap('3')">3</div>
+    <div class="nk" onclick="jTap('4')">4</div><div class="nk" onclick="jTap('5')">5</div><div class="nk" onclick="jTap('6')">6</div>
+    <div class="nk" onclick="jTap('7')">7</div><div class="nk" onclick="jTap('8')">8</div><div class="nk" onclick="jTap('9')">9</div>
+    <div class="nk empty"></div>
+    <div class="nk" onclick="jTap('0')">0</div>
+    <div class="nk back" onclick="jTap('x')">&#x232B;</div>
+  </div>
+</div>
+
+<!-- ═══ SHEET: BIDDER ═══ -->
+<div id="sheet-bidder" class="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-title" id="bidder-title">Add buyer</div>
+  <input type="text" class="bidder-search" id="bidder-search"
+         placeholder="Search…" oninput="filterBidders(this.value)">
+  <div class="bidder-list" id="bidder-list"></div>
+  <div class="sheet-close" onclick="closeTopSheet()">Done</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════
+const LOTS = [
+  { id: 81,  client: 'Green Pastures Co.',    raw: '200 × Suffolk 4-tooth Ewes' },
+  { id: 110, client: 'Hillside Ranch',         raw: '230 × Suffolk 4-tooth Ewes' },
+  { id: 111, client: 'Riverbend Livestock',    raw: '225 × Suffolk 4-tooth Ewes' },
+  { id: 82,  client: 'Maple Grove Estates',    raw: '50 × Suffolk 4-tooth Ewes'  },
+  { id: 83,  client: 'Oak Valley Farms',       raw: '140 × Suffolk 4-tooth Ewes' },
+  { id: 84,  client: 'Cedar Creek Holdings',   raw: '200 × Suffolk 4-tooth Ewes' },
+];
+
+const BIDDERS = [
+  'Nick Malcolm', 'Andrew Copperpot Farmhold', 'Cefn Glas Farming',
+  'Hawksby Cattle Co.', 'Blue Ridge Farms', 'Sunset Pastoral',
+  'Maple Grove Estates', 'Oak Valley Farms', 'Cedar Creek Holdings',
+  'Riverbend Livestock', 'Green Pastures Co.', 'Hillside Ranch',
+];
+
+// Per-lot state
+const ST = {};
+LOTS.forEach(l => {
+  const m = l.raw.match(/^(\d+)/);
+  ST[l.id] = {
+    tally:    m ? +m[1] : null,
+    weight:   null,
+    priceKg:  null, priceKgTo:   null,
+    priceHd:  null, priceHdTo:   null,
+    hdManual: false,
+    notes:    '',
+    buyer:    null,
+    ubs:      [],
+    outcome:  null,
+  };
+});
+
+// Increments
+const INC = {
+  KG:   ['1c','2c','5c','10c','50c'],
+  SM:   ['$1','$2','$5','$10','$50'],
+  LG:   ['$100','$200','$500','$1,000','$5,000'],
+  selKg:   1,   // selected row in /kg mode
+  selHd:   1,   // selected row in /head mode
+  mode:    'kg',
+};
+
+// App state
+let lotIdx  = 0;
+let sheetStack = [];       // stack of open sheet ids
+let priceMode  = 'kg';
+let pFocus     = 'from';
+let pBufFrom   = '', pBufTo = '';
+let sField     = 'tally';
+let sBuf       = '';
+let jumpBuf    = '';
+let bMode      = 'buyer';
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+const S = () => ST[LOTS[lotIdx].id];
+const L = () => LOTS[lotIdx];
+
+function calcHead() {
+  const s = S();
+  if (s.hdManual && s.priceHd !== null) return s.priceHd;
+  if (s.priceKg !== null && s.weight !== null)
+    return Math.round(parseFloat(s.priceKg) * parseFloat(s.weight));
+  return s.priceHd;
+}
+
+function fmtKg(v) {
+  if (v === null) return null;
+  return (+v).toFixed(2);
+}
+
+function lotDesc(l) {
+  return l.raw.replace(/^\d+\s*[×x]\s*/, '');
+}
+
+// ═══════════════════════════════════════════
+// RENDER — LOT LIST
+// ═══════════════════════════════════════════
+function renderList() {
+  const el = document.getElementById('lot-list-el');
+  el.innerHTML = LOTS.map((l, i) => {
+    const s = ST[l.id];
+    const dot = s.buyer ? 'sold' : s.outcome ? 'unsold' : '';
+    return `<div class="lot-row" onclick="enterLot(${i})">
+      <div class="lot-num">${l.id}</div>
+      <div class="lot-card">
+        <div class="lot-card-name">${l.client}</div>
+        <div class="lot-card-desc">${l.raw}</div>
+        ${dot ? `<div class="lot-dot ${dot}"></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// RENDER — LOT DETAIL
+// ═══════════════════════════════════════════
+function renderDetail() {
+  const l = L(), s = S();
+
+  document.getElementById('detail-lot-label').textContent = `Lot ${l.id}`;
+  document.getElementById('lot-client').textContent = l.client;
+  document.getElementById('lot-desc').textContent   = lotDesc(l);
+
+  // Tally
+  const tv = document.getElementById('val-tally');
+  tv.textContent = s.tally !== null ? s.tally : '—';
+  tv.className = 'cell-val' + (s.tally === null ? ' empty' : '');
+
+  // Weight
+  const wv = document.getElementById('val-weight');
+  wv.textContent = s.weight !== null ? s.weight : '—';
+  wv.className = 'cell-val' + (s.weight === null ? ' empty' : '');
+
+  // Price /kg
+  const pkv = document.getElementById('val-pricekg');
+  if (s.priceKg !== null) {
+    const from = fmtKg(s.priceKg);
+    const to   = s.priceKgTo !== null ? ` – ${fmtKg(s.priceKgTo)}` : '';
+    pkv.textContent = from + to;
+    pkv.className = 'cell-val';
+  } else {
+    pkv.textContent = '—'; pkv.className = 'cell-val empty';
+  }
+
+  // Price /head
+  const phv = document.getElementById('val-pricehead');
+  const hd  = calcHead();
+  if (hd !== null) {
+    const from = hd;
+    const to   = s.priceHdTo !== null ? ` – ${s.priceHdTo}` : '';
+    phv.textContent = from + to;
+    phv.className = 'cell-val';
+  } else {
+    phv.textContent = '—'; phv.className = 'cell-val empty';
+  }
+
+  // Notes
+  document.getElementById('val-notes').textContent = s.notes;
+
+  renderBidderArea();
+  renderNav();
+}
+
+function renderBidderArea() {
+  const s = S();
+  let h = '';
+
+  if (s.outcome) {
+    // Outcome active
+    const lbl = { not_sold:'Not sold', passed_in:'Passed in', withdrawn:'Withdrawn', unknown:'?' }[s.outcome];
+    h += `<div class="chips-row">
+      <div class="chip outcome" onclick="openSheet('sheet-notsold')">
+        <span class="chip-plus">&#8856;</span> ${lbl}
+      </div>
+      <div class="chip" onclick="openBidderSheet('ub')">
+        <span class="chip-plus">+</span> Underbidder
+      </div>
+    </div>`;
+    if (s.ubs.length) {
+      h += `<div class="bidder-section">
+        <div class="bidder-cell ub" onclick="openBidderSheet('ub')">
+          <div class="bidder-cell-lbl">Underbidder</div>
+          <div class="bidder-names">
+            ${s.ubs.map(n=>`<div class="bidder-name">${n}</div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+    }
+  } else {
+    h += '<div class="bidder-section">';
+    if (s.buyer) {
+      h += `<div class="bidder-cell" onclick="openBidderSheet('buyer')">
+        <div class="bidder-cell-lbl">Buyer</div>
+        <div class="bidder-names"><div class="bidder-name">${s.buyer}</div></div>
+      </div>`;
+    }
+    if (s.ubs.length) {
+      h += `<div class="bidder-cell ub" onclick="openBidderSheet('ub')">
+        <div class="bidder-cell-lbl">Underbidder</div>
+        <div class="bidder-names">
+          ${s.ubs.map(n=>`<div class="bidder-name">${n}</div>`).join('')}
+        </div>
+      </div>`;
+    }
+    h += '</div>';
+
+    h += '<div class="chips-row">';
+    if (!s.buyer)  h += `<div class="chip" onclick="openBidderSheet('buyer')"><span class="chip-plus">+</span> Buyer</div>`;
+    h +=           `<div class="chip" onclick="openBidderSheet('ub')"><span class="chip-plus">+</span> Underbidder</div>`;
+    if (!s.buyer)  h += `<div class="chip" onclick="openSheet('sheet-notsold')"><span class="chip-plus">+</span> Not sold</div>`;
+    h += '</div>';
+  }
+
+  document.getElementById('bidder-area').innerHTML = h;
+}
+
+function renderNav() {
+  const prev = lotIdx - 1, next = lotIdx + 1;
+  document.getElementById('btn-prev').classList.toggle('dim', prev < 0);
+
+  const nextLbl  = document.getElementById('next-lbl');
+  const nextName = document.getElementById('next-name');
+  const btnNext  = document.getElementById('btn-next');
+
+  if (next < LOTS.length) {
+    nextLbl.textContent  = `NEXT LOT ${LOTS[next].id}`;
+    nextName.textContent = LOTS[next].client;
+    btnNext.style.opacity = '1'; btnNext.style.pointerEvents = '';
+  } else {
+    nextLbl.textContent  = 'LAST LOT';
+    nextName.textContent = 'Done';
+    btnNext.style.opacity = '0.4'; btnNext.style.pointerEvents = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function enterLot(idx) {
+  lotIdx = idx;
+  renderDetail();
+  document.getElementById('screen-list').classList.add('pushed');
+  document.getElementById('screen-detail').classList.add('active');
+}
+
+function leaveLot() {
+  renderList();
+  document.getElementById('screen-list').classList.remove('pushed');
+  document.getElementById('screen-detail').classList.remove('active');
+}
+
+function goPrev() {
+  if (lotIdx <= 0) return;
+  lotIdx--; renderDetail();
+}
+function goNext() {
+  if (lotIdx >= LOTS.length - 1) return;
+  lotIdx++; renderDetail();
+}
+
+document.getElementById('detail-back').onclick = leaveLot;
+
+// ═══════════════════════════════════════════
+// SHEET STACK
+// ═══════════════════════════════════════════
+function openSheet(id) {
+  sheetStack.push(id);
+  document.getElementById(id).classList.add('open');
+  document.getElementById('backdrop').classList.add('on');
+}
+
+function closeTopSheet() {
+  const id = sheetStack.pop();
+  if (id) document.getElementById(id).classList.remove('open');
+  if (!sheetStack.length) document.getElementById('backdrop').classList.remove('on');
+}
+
+document.getElementById('backdrop').onclick = () => closeTopSheet();
+
+// ═══════════════════════════════════════════
+// NOT SOLD SHEET
+// ═══════════════════════════════════════════
+function openNotSoldSheet() {
+  refreshOutcomeBtns();
+  openSheet('sheet-notsold');
+}
+
+function refreshOutcomeBtns() {
+  const cur = S().outcome;
+  ['not_sold','passed_in','withdrawn','unknown'].forEach(k => {
+    document.getElementById('obtn-' + k).classList.toggle('sel', cur === k);
+  });
+}
+
+function setOutcome(type) {
+  const s = S();
+  s.outcome = (s.outcome === type) ? null : type;
+  if (s.outcome) s.buyer = null;
+  renderDetail();
+  closeTopSheet();
+}
+
+// Override chip onclick to use our version
+document.addEventListener('click', e => {
+  if (e.target.closest('[onclick="openSheet(\'sheet-notsold\')"]')) {
+    e.stopPropagation();
+    openNotSoldSheet();
+  }
+}, true);
+
+// ═══════════════════════════════════════════
+// PRICE SHEET
+// ═══════════════════════════════════════════
+function openPriceSheet(mode) {
+  priceMode = mode;
+  const s = S();
+
+  document.getElementById('price-title').textContent =
+    mode === 'kg' ? 'Price per kg' : 'Price per head';
+
+  pBufFrom = mode === 'kg'
+    ? (s.priceKg  !== null ? String(s.priceKg)  : '')
+    : (calcHead() !== null ? String(calcHead()) : '');
+  pBufTo = mode === 'kg'
+    ? (s.priceKgTo !== null ? String(s.priceKgTo) : '')
+    : (s.priceHdTo !== null ? String(s.priceHdTo) : '');
+
+  focusPrice('from');
+  renderPriceBufs();
+  openSheet('sheet-price');
+}
+
+function focusPrice(field) {
+  pFocus = field;
+  document.getElementById('pfield-from').classList.toggle('focused', field === 'from');
+  document.getElementById('pfield-to').classList.toggle('focused', field === 'to');
+}
+
+function renderPriceBufs() {
+  document.getElementById('pbuf-from').textContent = pBufFrom;
+  document.getElementById('pbuf-to').textContent   = pBufTo;
+}
+
+function pTap(k) {
+  const cur = pFocus === 'from' ? pBufFrom : pBufTo;
+  let v = cur;
+  if (k === 'x') v = v.slice(0,-1);
+  else if (k === '.') { if (!v.includes('.')) v += '.'; }
+  else if (v.length < 9) v += k;
+  if (pFocus === 'from') pBufFrom = v; else pBufTo = v;
+  renderPriceBufs();
+}
+
+function commitPrice() {
+  const s = S();
+  const from = pBufFrom ? parseFloat(pBufFrom) : null;
+  const to   = pBufTo   ? parseFloat(pBufTo)   : null;
+  const fv = (from !== null && !isNaN(from)) ? from : null;
+  const tv = (to   !== null && !isNaN(to))   ? to   : null;
+
+  if (priceMode === 'kg') {
+    s.priceKg   = fv; s.priceKgTo = tv;
+    s.hdManual  = false;
+  } else {
+    s.priceHd   = fv; s.priceHdTo = tv;
+    s.hdManual  = fv !== null;
+  }
+  closeTopSheet();
+  renderDetail();
+}
+
+// ═══════════════════════════════════════════
+// SIMPLE (tally / weight) SHEET
+// ═══════════════════════════════════════════
+function openSimpleSheet(field) {
+  sField = field;
+  const s = S();
+  const titles = { tally:'Tally', weight:'Weight' };
+  const units  = { tally:'', weight:' kg' };
+
+  document.getElementById('simple-title').textContent = titles[field];
+  document.getElementById('simple-lbl').textContent   = titles[field];
+  document.getElementById('simple-unit').textContent  = units[field];
+  document.getElementById('snk-dot').style.visibility = field === 'weight' ? 'visible' : 'hidden';
+
+  sBuf = s[field] !== null ? String(s[field]) : '';
+  document.getElementById('sbuf').textContent = sBuf;
+  openSheet('sheet-simple');
+}
+
+function sTap(k) {
+  if (k === 'x') sBuf = sBuf.slice(0,-1);
+  else if (k === '.') { if (!sBuf.includes('.')) sBuf += '.'; }
+  else if (sBuf.length < 6) sBuf += k;
+  document.getElementById('sbuf').textContent = sBuf;
+}
+
+function commitSimple() {
+  const s = S();
+  const v = sBuf ? parseFloat(sBuf) : null;
+  s[sField] = (v !== null && !isNaN(v)) ? v : null;
+  if (sField === 'weight') s.hdManual = false;
+  closeTopSheet();
+  renderDetail();
+}
+
+// ═══════════════════════════════════════════
+// NOTES SHEET
+// ═══════════════════════════════════════════
+function openNotesSheet() {
+  const ta = document.getElementById('notes-ta');
+  ta.value = S().notes;
+  openSheet('sheet-notes');
+  setTimeout(() => ta.focus(), 320);
+}
+
+function commitNotes() {
+  S().notes = document.getElementById('notes-ta').value.trim();
+  closeTopSheet();
+  renderDetail();
+}
+
+// ═══════════════════════════════════════════
+// INCREMENTS SHEET
+// ═══════════════════════════════════════════
+function openIncFromPrice() {
+  // Keep price sheet open beneath
+  INC.mode = priceMode;
+  refreshIncTabs();
+  renderIncTable();
+  openSheet('sheet-inc');
+}
+
+function closeIncBack() {
+  closeTopSheet();
+}
+
+function setIncMode(m) {
+  INC.mode = m;
+  refreshIncTabs();
+  renderIncTable();
+}
+
+function refreshIncTabs() {
+  document.getElementById('itab-kg').classList.toggle('active', INC.mode === 'kg');
+  document.getElementById('itab-head').classList.toggle('active', INC.mode === 'head');
+}
+
+function renderIncTable() {
+  const tbl = document.getElementById('inc-table');
+  const selRow = INC.mode === 'kg' ? INC.selKg : INC.selHd;
+  tbl.innerHTML = INC.KG.map((kg, i) => {
+    const sm = INC.SM[i], lg = INC.LG[i];
+    const isSel = i === selRow;
+    return `<div class="inc-row">
+      <div class="inc-cell ${INC.mode==='kg' && isSel ? 'sel':''}" onclick="pickInc(${i},0)">${kg}</div>
+      <div class="inc-cell ${INC.mode==='head' && isSel ? 'sel':''}" onclick="pickInc(${i},1)">${sm}</div>
+      <div class="inc-cell" onclick="pickInc(${i},2)">${lg}</div>
+    </div>`;
+  }).join('');
+}
+
+function pickInc(row) {
+  if (INC.mode === 'kg') INC.selKg = row;
+  else                   INC.selHd = row;
+  renderIncTable();
+}
+
+// ═══════════════════════════════════════════
+// JUMP TO LOT
+// ═══════════════════════════════════════════
+function openJumpSheet() {
+  jumpBuf = '';
+  refreshJumpDisplay();
+  renderJumpLots('');
+  openSheet('sheet-jump');
+}
+
+function jTap(k) {
+  if (k === 'x') jumpBuf = jumpBuf.slice(0,-1);
+  else if (jumpBuf.length < 4) jumpBuf += k;
+  refreshJumpDisplay();
+  renderJumpLots(jumpBuf);
+}
+
+function refreshJumpDisplay() {
+  const valEl = document.getElementById('jump-val');
+  const phEl  = document.getElementById('jump-ph');
+  if (jumpBuf) {
+    valEl.textContent = jumpBuf; valEl.style.display = '';
+    phEl.style.display = 'none';
+  } else {
+    valEl.style.display = 'none';
+    phEl.style.display = '';
+  }
+}
+
+function renderJumpLots(filter) {
+  const el = document.getElementById('jump-lots');
+  const list = filter
+    ? LOTS.filter(l => String(l.id).startsWith(filter))
+    : LOTS;
+  el.innerHTML = list.map(l => {
+    const i = LOTS.indexOf(l);
+    return `<div class="jump-lot-row" onclick="jumpTo(${i})">
+      <div class="jump-lot-num">${l.id}</div>
+      <div>
+        <div class="jump-lot-name">${l.client}</div>
+        <div class="jump-lot-desc">${l.raw}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function jumpTo(idx) {
+  lotIdx = idx;
+  renderDetail();
+  closeTopSheet();
+}
+
+function commitJump() {
+  if (!jumpBuf) return;
+  const num = parseInt(jumpBuf);
+  const idx = LOTS.findIndex(l => l.id === num);
+  if (idx >= 0) jumpTo(idx);
+}
+
+// ═══════════════════════════════════════════
+// BIDDER SHEET
+// ═══════════════════════════════════════════
+function openBidderSheet(mode) {
+  bMode = mode;
+  document.getElementById('bidder-title').textContent =
+    mode === 'buyer' ? 'Select buyer' : 'Add underbidder';
+  const srch = document.getElementById('bidder-search');
+  srch.value = '';
+  srch.className = 'bidder-search' + (mode === 'ub' ? ' ub' : '');
+  renderBidderList('');
+  openSheet('sheet-bidder');
+  setTimeout(() => srch.focus(), 300);
+}
+
+function filterBidders(q) { renderBidderList(q); }
+
+function renderBidderList(q) {
+  const s = S();
+  const list = q
+    ? BIDDERS.filter(b => b.toLowerCase().includes(q.toLowerCase()))
+    : BIDDERS;
+  document.getElementById('bidder-list').innerHTML = list.map(name => {
+    let cls = 'bidder-row';
+    if (bMode === 'buyer' && s.buyer === name)    cls += ' buyer-sel';
+    if (bMode === 'ub'    && s.ubs.includes(name)) cls += ' ub-sel';
+    return `<div class="${cls}" onclick="pickBidder('${name.replace(/'/g,"\\'")}')" >
+      <div class="bidder-row-name">${name}</div>
+      <div class="bidder-check"></div>
+    </div>`;
+  }).join('');
+}
+
+function pickBidder(name) {
+  const s = S();
+  if (bMode === 'buyer') {
+    s.buyer = s.buyer === name ? null : name;
+    if (s.buyer) s.outcome = null;
+  } else {
+    const i = s.ubs.indexOf(name);
+    if (i >= 0) s.ubs.splice(i,1); else s.ubs.push(name);
+  }
+  renderBidderList(document.getElementById('bidder-search').value);
+  renderBidderArea();
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+renderList();
+</script>
+</body>
+</html>
