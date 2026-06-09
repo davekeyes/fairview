@@ -592,14 +592,14 @@
 
       <!-- Price (split) -->
       <div class="price-cell">
-        <div class="price-half left" onclick="openPriceSheet('kg')">
+        <div class="price-half left" id="ph-kg" style="touch-action:none">
           <div class="cell-lbl">Price</div>
           <div class="cell-vrow">
             <div class="cell-val" id="val-pricekg">—</div>
             <div class="cell-unit">/kg</div>
           </div>
         </div>
-        <div class="price-half right" onclick="openPriceSheet('head')">
+        <div class="price-half right" id="ph-head" style="touch-action:none">
           <div class="cell-lbl ghost">Price</div>
           <div class="cell-vrow">
             <div class="cell-val" id="val-pricehead">—</div>
@@ -797,14 +797,26 @@ LOTS.forEach(l => {
   };
 });
 
-// Increments
+// Increments — three columns: /kg (cents), /head small ($), /head large ($)
+// Each cell is independently selectable; kg and head store separate selections
+const INC_LABELS = [
+  ['1c','$1','$100'],
+  ['2c','$2','$200'],
+  ['5c','$5','$500'],
+  ['10c','$10','$1,000'],
+  ['50c','$50','$5,000'],
+];
+const INC_VALS = [
+  [0.01, 1,  100],
+  [0.02, 2,  200],
+  [0.05, 5,  500],
+  [0.10, 10, 1000],
+  [0.50, 50, 5000],
+];
 const INC = {
-  KG:   ['1c','2c','5c','10c','50c'],
-  SM:   ['$1','$2','$5','$10','$50'],
-  LG:   ['$100','$200','$500','$1,000','$5,000'],
-  selKg:   1,   // selected row in /kg mode
-  selHd:   1,   // selected row in /head mode
   mode:    'kg',
+  kgCell:  { row: 1, col: 0 },   // 2c default
+  hdCell:  { row: 1, col: 1 },   // $2 default
 };
 
 // App state
@@ -817,6 +829,15 @@ let sField     = 'tally';
 let sBuf       = '';
 let jumpBuf    = '';
 let bMode      = 'buyer';
+
+// Price cell drag state
+let dragMode   = null;     // 'kg' | 'head' | null
+let dragStartY = 0;
+let dragMoved  = false;
+let dragBaseKg = 0;
+let dragBaseHd = 0;
+const DRAG_THRESHOLD = 8;  // px before drag starts
+const PX_PER_STEP    = 22; // px of drag per one increment step
 
 // ═══════════════════════════════════════════
 // HELPERS
@@ -1197,23 +1218,25 @@ function refreshIncTabs() {
 
 function renderIncTable() {
   const tbl = document.getElementById('inc-table');
-  const selRow = INC.mode === 'kg' ? INC.selKg : INC.selHd;
-  tbl.innerHTML = INC.KG.map((kg, i) => {
-    const sm = INC.SM[i], lg = INC.LG[i];
-    const isSel = i === selRow;
+  const selCell = INC.mode === 'kg' ? INC.kgCell : INC.hdCell;
+  tbl.innerHTML = INC_LABELS.map((row, r) => {
     return `<div class="inc-row">
-      <div class="inc-cell ${INC.mode==='kg' && isSel ? 'sel':''}" onclick="pickInc(${i},0)">${kg}</div>
-      <div class="inc-cell ${INC.mode==='head' && isSel ? 'sel':''}" onclick="pickInc(${i},1)">${sm}</div>
-      <div class="inc-cell" onclick="pickInc(${i},2)">${lg}</div>
+      ${row.map((lbl, c) => {
+        const sel = selCell.row === r && selCell.col === c;
+        return `<div class="inc-cell ${sel ? 'sel':''}" onclick="pickInc(${r},${c})">${lbl}</div>`;
+      }).join('')}
     </div>`;
   }).join('');
 }
 
-function pickInc(row) {
-  if (INC.mode === 'kg') INC.selKg = row;
-  else                   INC.selHd = row;
+function pickInc(row, col) {
+  if (INC.mode === 'kg') INC.kgCell = { row, col };
+  else                   INC.hdCell = { row, col };
   renderIncTable();
 }
+
+function kgInc()  { return INC_VALS[INC.kgCell.row][INC.kgCell.col]; }
+function hdInc()  { return INC_VALS[INC.hdCell.row][INC.hdCell.col]; }
 
 // ═══════════════════════════════════════════
 // JUMP TO LOT
@@ -1321,9 +1344,75 @@ function pickBidder(name) {
 }
 
 // ═══════════════════════════════════════════
+// PRICE CELL DRAG-TO-INCREMENT
+// ═══════════════════════════════════════════
+function priceCellDown(e, mode) {
+  dragMode   = mode;
+  dragMoved  = false;
+  dragStartY = e.clientY;
+  const s    = S();
+  dragBaseKg = s.priceKg  !== null ? parseFloat(s.priceKg) : 0;
+  dragBaseHd = calcHead() !== null ? calcHead() : 0;
+  e.currentTarget.setPointerCapture(e.pointerId);
+}
+
+function priceCellMove(e) {
+  if (!dragMode) return;
+  const dy = e.clientY - dragStartY;
+  if (!dragMoved && Math.abs(dy) < DRAG_THRESHOLD) return;
+  dragMoved = true;
+
+  // steps: negative dy (up) = positive steps (price increase)
+  const steps = -Math.round(dy / PX_PER_STEP);
+  const s = S();
+
+  if (dragMode === 'kg') {
+    const inc = kgInc();
+    // Snap to increment grid from base
+    const raw  = dragBaseKg + steps * inc;
+    s.priceKg  = Math.max(0, Math.round(raw / inc) * inc);
+    s.hdManual = false;
+  } else {
+    const inc = hdInc();
+    const raw  = dragBaseHd + steps * inc;
+    s.priceHd  = Math.max(0, Math.round(raw / inc) * inc);
+    s.hdManual = true;
+  }
+  renderDetail();
+}
+
+function priceCellUp(e) {
+  if (!dragMode) return;
+  if (!dragMoved) {
+    // Tap: open numpad sheet
+    const m = dragMode;
+    dragMode = null;
+    openPriceSheet(m);
+  } else {
+    dragMode = null;
+  }
+}
+
+// Bind pointer events to price half cells
+function bindPriceCells() {
+  ['kg','head'].forEach(mode => {
+    const el = document.getElementById('ph-' + mode);
+    el.addEventListener('pointerdown', e => priceCellDown(e, mode));
+    el.addEventListener('pointermove', priceCellMove);
+    el.addEventListener('pointerup',   priceCellUp);
+    el.addEventListener('pointercancel', () => { dragMode = null; });
+  });
+  // Safety net: document-level pointerup in case capture is lost
+  document.addEventListener('pointerup', e => {
+    if (dragMode) priceCellUp(e);
+  });
+}
+
+// ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
 renderList();
+bindPriceCells();
 </script>
 </body>
 </html>
