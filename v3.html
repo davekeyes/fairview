@@ -542,11 +542,43 @@
     }
     .bidder-row.buyer-sel .bidder-check::after,
     .bidder-row.ub-sel    .bidder-check::after { display: block; }
+
+    /* ---- DRAG HUD ---- */
+    .drag-hud {
+      position: fixed;
+      left: 12px; right: 12px;
+      background: var(--n100);
+      border-top: 2px solid var(--sell);
+      border-radius: var(--r);
+      padding: 10px 14px;
+      z-index: 40;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.97);
+      transition: opacity 0.14s ease-out, transform 0.14s ease-out;
+    }
+    .drag-hud.visible { opacity: 1; transform: scale(1); }
+    .drag-hud-inner { display: flex; align-items: center; justify-content: space-between; }
+    .drag-hud-vrow  { display: flex; align-items: baseline; gap: 4px; }
+    .drag-hud-val   { font-size: 36px; font-weight: 600; color: var(--n900); }
+    .drag-hud-unit  { font-size: 16px; font-style: italic; color: var(--n500); }
+    .drag-hud-inc   { font-size: 13px; font-weight: 500; color: var(--sell); min-width: 56px; }
   </style>
 </head>
 <body>
 
 <div id="backdrop"></div>
+
+<!-- Price drag HUD — appears over price cells during swipe -->
+<div id="drag-hud" class="drag-hud">
+  <div class="drag-hud-inner">
+    <div class="drag-hud-inc" id="hud-inc">↕ $1</div>
+    <div class="drag-hud-vrow">
+      <div class="drag-hud-val"  id="hud-val">—</div>
+      <div class="drag-hud-unit" id="hud-unit">/head</div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ SCREEN: LOT LIST ═══ -->
 <div id="screen-list" class="screen">
@@ -816,7 +848,7 @@ const INC_VALS = [
 const INC = {
   mode:    'kg',
   kgCell:  { row: 1, col: 0 },   // 2c default
-  hdCell:  { row: 1, col: 1 },   // $2 default
+  hdCell:  { row: 0, col: 1 },   // $1 default (sheep); cattle would pick $5 or higher
 };
 
 // App state
@@ -1346,6 +1378,39 @@ function pickBidder(name) {
 // ═══════════════════════════════════════════
 // PRICE CELL DRAG-TO-INCREMENT
 // ═══════════════════════════════════════════
+function hudIncLabel(mode, direction) {
+  const inc = mode === 'kg' ? kgInc() : hdInc();
+  const label = mode === 'kg'
+    ? (inc < 1 ? Math.round(inc * 100) + 'c' : '$' + inc) + '/kg'
+    : '$' + inc + '/head';
+  const arrow = direction > 0 ? '▲ ' : direction < 0 ? '▼ ' : '↕ ';
+  return arrow + label;
+}
+
+function showHUD(mode) {
+  const cell = document.querySelector('.price-cell');
+  const rect = cell.getBoundingClientRect();
+  const hud  = document.getElementById('drag-hud');
+  hud.style.top    = rect.top + 'px';
+  hud.style.height = rect.height + 'px';
+  hud.style.padding = '0 14px';
+  hud.classList.add('visible');
+  updateHUD(mode, 0);
+}
+
+function updateHUD(mode, direction) {
+  const s   = S();
+  const val = mode === 'kg' ? s.priceKg : calcHead();
+  document.getElementById('hud-val').textContent  =
+    mode === 'kg' ? (val !== null ? (+val).toFixed(2) : '—') : (val !== null ? Math.round(val) : '—');
+  document.getElementById('hud-unit').textContent = mode === 'kg' ? '/kg' : '/head';
+  document.getElementById('hud-inc').textContent  = hudIncLabel(mode, direction);
+}
+
+function hideHUD() {
+  document.getElementById('drag-hud').classList.remove('visible');
+}
+
 function priceCellDown(e, mode) {
   dragMode   = mode;
   dragMoved  = false;
@@ -1360,15 +1425,18 @@ function priceCellMove(e) {
   if (!dragMode) return;
   const dy = e.clientY - dragStartY;
   if (!dragMoved && Math.abs(dy) < DRAG_THRESHOLD) return;
-  dragMoved = true;
 
-  // steps: negative dy (up) = positive steps (price increase)
+  if (!dragMoved) {
+    dragMoved = true;
+    showHUD(dragMode);
+  }
+
+  // Negative dy = dragged up = price increase
   const steps = -Math.round(dy / PX_PER_STEP);
   const s = S();
 
   if (dragMode === 'kg') {
     const inc = kgInc();
-    // Snap to increment grid from base
     const raw  = dragBaseKg + steps * inc;
     s.priceKg  = Math.max(0, Math.round(raw / inc) * inc);
     s.hdManual = false;
@@ -1378,13 +1446,15 @@ function priceCellMove(e) {
     s.priceHd  = Math.max(0, Math.round(raw / inc) * inc);
     s.hdManual = true;
   }
+
+  updateHUD(dragMode, -dy);   // dy negative = up = positive direction
   renderDetail();
 }
 
 function priceCellUp(e) {
   if (!dragMode) return;
+  hideHUD();
   if (!dragMoved) {
-    // Tap: open numpad sheet
     const m = dragMode;
     dragMode = null;
     openPriceSheet(m);
