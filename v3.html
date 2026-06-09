@@ -225,6 +225,9 @@
     }
 
     /* ---- BIDDER AREA ---- */
+    #bidder-area {
+      display: flex; flex-direction: column; gap: 10px;
+    }
     .bidder-section {
       display: flex; flex-direction: column; gap: 8px;
     }
@@ -243,7 +246,6 @@
       text-transform: uppercase; letter-spacing: 0.5px;
       margin-bottom: 6px;
     }
-    .bidder-cell.ub .bidder-cell-lbl { color: var(--green); }
     .bidder-names { display: flex; flex-direction: column; gap: 4px; }
     .bidder-name {
       font-size: 20px; font-weight: 500; color: var(--n800);
@@ -264,9 +266,10 @@
     }
     .chip:active { opacity: 0.7; }
     .chip-plus { font-size: 15px; line-height: 1; }
+    /* Selected outcome chip — solid red pill, white text/icon (per Figma) */
     .chip.outcome {
-      background: rgba(190,48,48,0.12);
-      border-top-color: var(--red); color: var(--red);
+      background: var(--red);
+      border-top-color: var(--red); color: #fff;
     }
 
     /* ---- ACTION BAR ---- */
@@ -368,9 +371,10 @@
       transition: background 0.14s, border-color 0.14s, color 0.14s;
     }
     .outcome-btn:active { opacity: 0.7; }
+    /* Selected = grey-filled pill (per Figma), not red */
     .outcome-btn.sel {
-      background: rgba(190,48,48,0.14);
-      border-color: var(--red); color: var(--red);
+      background: var(--n300);
+      border-color: var(--n500); color: var(--n900);
     }
 
     /* ---- PRICE SHEET ---- */
@@ -980,55 +984,40 @@ function renderDetail() {
 
 function renderBidderArea() {
   const s = S();
-  let h = '';
+  const blocks = [];
+
+  const buyerCell = `<div class="bidder-cell" onclick="openBidderSheet('buyer')">
+    <div class="bidder-cell-lbl">Buyer</div>
+    <div class="bidder-names"><div class="bidder-name">${s.buyer}</div></div>
+  </div>`;
+  const ubCell = `<div class="bidder-cell ub" onclick="openBidderSheet('ub')">
+    <div class="bidder-cell-lbl">Underbidder</div>
+    <div class="bidder-names">
+      ${s.ubs.map(n=>`<div class="bidder-name">${n}</div>`).join('')}
+    </div>
+  </div>`;
 
   if (s.outcome) {
-    // Outcome active
     const lbl = { not_sold:'Not sold', passed_in:'Passed in', withdrawn:'Withdrawn', unknown:'?' }[s.outcome];
-    h += `<div class="chips-row">
-      <div class="chip outcome" onclick="openSheet('sheet-notsold')">
-        <span class="chip-plus">&#8856;</span> ${lbl}
-      </div>
-      <div class="chip" onclick="openBidderSheet('ub')">
-        <span class="chip-plus">+</span> Underbidder
-      </div>
-    </div>`;
-    if (s.ubs.length) {
-      h += `<div class="bidder-section">
-        <div class="bidder-cell ub" onclick="openBidderSheet('ub')">
-          <div class="bidder-cell-lbl">Underbidder</div>
-          <div class="bidder-names">
-            ${s.ubs.map(n=>`<div class="bidder-name">${n}</div>`).join('')}
-          </div>
-        </div>
-      </div>`;
-    }
+    blocks.push(`<div class="chips-row">
+      <div class="chip" onclick="openBidderSheet('ub')"><span class="chip-plus">+</span> Underbidder</div>
+      <div class="chip outcome" onclick="openNotSoldSheet()"><span class="chip-plus">&#8856;</span> ${lbl}</div>
+    </div>`);
+    if (s.ubs.length) blocks.push(`<div class="bidder-section">${ubCell}</div>`);
   } else {
-    h += '<div class="bidder-section">';
-    if (s.buyer) {
-      h += `<div class="bidder-cell" onclick="openBidderSheet('buyer')">
-        <div class="bidder-cell-lbl">Buyer</div>
-        <div class="bidder-names"><div class="bidder-name">${s.buyer}</div></div>
-      </div>`;
-    }
-    if (s.ubs.length) {
-      h += `<div class="bidder-cell ub" onclick="openBidderSheet('ub')">
-        <div class="bidder-cell-lbl">Underbidder</div>
-        <div class="bidder-names">
-          ${s.ubs.map(n=>`<div class="bidder-name">${n}</div>`).join('')}
-        </div>
-      </div>`;
-    }
-    h += '</div>';
+    const cells = [];
+    if (s.buyer)      cells.push(buyerCell);
+    if (s.ubs.length) cells.push(ubCell);
+    if (cells.length) blocks.push(`<div class="bidder-section">${cells.join('')}</div>`);
 
-    h += '<div class="chips-row">';
-    if (!s.buyer)  h += `<div class="chip" onclick="openBidderSheet('buyer')"><span class="chip-plus">+</span> Buyer</div>`;
-    h +=           `<div class="chip" onclick="openBidderSheet('ub')"><span class="chip-plus">+</span> Underbidder</div>`;
-    if (!s.buyer)  h += `<div class="chip" onclick="openSheet('sheet-notsold')"><span class="chip-plus">+</span> Not sold</div>`;
-    h += '</div>';
+    let chips = '';
+    if (!s.buyer) chips += `<div class="chip" onclick="openBidderSheet('buyer')"><span class="chip-plus">+</span> Buyer</div>`;
+    chips +=       `<div class="chip" onclick="openBidderSheet('ub')"><span class="chip-plus">+</span> Underbidder</div>`;
+    if (!s.buyer) chips += `<div class="chip" onclick="openNotSoldSheet()"><span class="chip-plus">+</span> Not sold</div>`;
+    blocks.push(`<div class="chips-row">${chips}</div>`);
   }
 
-  document.getElementById('bidder-area').innerHTML = h;
+  document.getElementById('bidder-area').innerHTML = blocks.join('');
 }
 
 function renderNav() {
@@ -1125,13 +1114,6 @@ function setOutcome(type) {
   closeTopSheet();
 }
 
-// Override chip onclick to use our version
-document.addEventListener('click', e => {
-  if (e.target.closest('[onclick="openSheet(\'sheet-notsold\')"]')) {
-    e.stopPropagation();
-    openNotSoldSheet();
-  }
-}, true);
 
 // ═══════════════════════════════════════════
 // PRICE SHEET
@@ -1388,12 +1370,15 @@ function renderBidderList(q) {
 function pickBidder(name) {
   const s = S();
   if (bMode === 'buyer') {
+    // Single selection — choose (or clear, if re-tapping current) and close
     s.buyer = s.buyer === name ? null : name;
     if (s.buyer) s.outcome = null;
-  } else {
-    const i = s.ubs.indexOf(name);
-    if (i >= 0) s.ubs.splice(i,1); else s.ubs.push(name);
+    renderBidderArea();
+    closeTopSheet();
+    return;
   }
+  const i = s.ubs.indexOf(name);
+  if (i >= 0) s.ubs.splice(i,1); else s.ubs.push(name);
   renderBidderList(document.getElementById('bidder-search').value);
   renderBidderArea();
 }
